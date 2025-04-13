@@ -10,7 +10,7 @@ namespace SapphTools.Laps.Internal;
 internal class LapsInternal : IDisposable {
     private LocalMachineInfo? _localMachineInfo;
     private readonly LdapConnectionInfo _ldapConnectionInfo;
-    private LdapConnection _ldapConn;
+    private readonly LdapConnection _ldapConn;
     private IntPtr _hDecryptionToken;
     private bool _disposed;
 
@@ -32,102 +32,104 @@ internal class LapsInternal : IDisposable {
         _ldapConnectionInfo = GetLdapConnectionInfo(_ldapConn);
     }
 
+    private void AddEncryptedPasswordSet(
+        List<PasswordInfo> outputData,
+        ComputerNameInfo computer,
+        byte[] currentPassword,
+        byte[][]? historyPasswords,
+        PasswordSource currentSource,
+        PasswordSource historySource,
+        DateTime? expirationUtc) {
+        PasswordInfo item = BuildPasswordInfoFromEncryptedPassword(
+            computer,
+            currentSource,
+            currentPassword,
+            expirationUtc
+        );
+        outputData.Add(item);
 
-    public List<PasswordInfo> ProcessIdentity(string Identity) {
+        if (!IncludeHistory || historyPasswords is not { Length: > 0 }) {
+            return;
+        }
+
+        SortedList<DateTime, PasswordInfo> sorted = new(new DescendingDateTimeComparer());
+
+        foreach (byte[] blob in historyPasswords) {
+            if (blob is null or { Length: 0 }) {
+                continue;
+            }
+
+            item = BuildPasswordInfoFromEncryptedPassword(computer, historySource, blob, null);
+
+            DateTime key = item switch {
+                PasswordInfoClearText clear => clear.PasswordUpdateTime ?? DateTime.MinValue,
+                PasswordInfoSecureString secure => secure.PasswordUpdateTime ?? DateTime.MinValue,
+                _ => throw new ArgumentException("Unexpected password info type")
+            };
+
+            sorted.Add(key, item);
+        }
+
+        foreach (PasswordInfo entry in sorted.Values) {
+            outputData.Add(entry);
+        }
+    }
+
+    public IEnumerable<PasswordInfo> ProcessIdentity(string Identity) {
         List<PasswordInfo> outputData = new();
         ComputerNameInfo computerNameInfo = GetComputerNameInfo(_ldapConn, _ldapConnectionInfo, Identity);
+
         AccountPasswordAttributes passwordAttributes =
             GetPasswordAttributes(_ldapConn, computerNameInfo.DistinguishedName) ??
             throw new LapsException($"Failed to query password attributes for the '{Identity}' object in AD");
-        DateTime? passwordExpUtc;
+
+        DateTime? passwordExpUtc = passwordAttributes.PasswordExpiration?.ToUniversalTime();
+
         if (passwordAttributes.EncryptedPassword != null) {
-            passwordExpUtc = passwordAttributes.PasswordExpiration?.ToUniversalTime();
-            PasswordInfo item = BuildPasswordInfoFromEncryptedPassword(
+            AddEncryptedPasswordSet(
+                outputData,
                 computerNameInfo,
-                PasswordSource.EncryptedPassword,
                 passwordAttributes.EncryptedPassword,
+                passwordAttributes.EncryptedPasswordHistory,
+                PasswordSource.EncryptedPassword,
+                PasswordSource.EncryptedPasswordHistory,
                 passwordExpUtc
             );
-            outputData.Add(item);
-            if (IncludeHistory && passwordAttributes.EncryptedPasswordHistory != null && passwordAttributes.EncryptedPasswordHistory.Length != 0) {
-                SortedList<DateTime, PasswordInfo> sortedList = new(new DescendingDateTimeComparer());
-                byte[][] encryptedPasswordHistory = passwordAttributes.EncryptedPasswordHistory;
-                foreach (byte[] array in encryptedPasswordHistory) {
-                    if (array == null || array.Length == 0) {
-                        continue;
-                    }
-                    item = BuildPasswordInfoFromEncryptedPassword(
-                        computerNameInfo,
-                        PasswordSource.EncryptedPasswordHistory,
-                        array,
-                        null
-                    );
-                    DateTime key;
-                    if (item is PasswordInfoClearText passwordInfoClearText) {
-                        key = passwordInfoClearText.PasswordUpdateTime ?? DateTime.MinValue;
-                    } else {
-                        if (item is not PasswordInfoSecureString) {
-                            throw new ArgumentException("Unexpected password info type");
-                        }
-                        PasswordInfoSecureString passwordInfoSecureString = (PasswordInfoSecureString)item;
-                        key = passwordInfoSecureString.PasswordUpdateTime ?? DateTime.MinValue;
-                    }
-                    sortedList.Add(key, item);
-                }
-                foreach (KeyValuePair<DateTime, PasswordInfo> passwordHistory in sortedList) {
-                    outputData.Add(passwordHistory.Value);
-                }
-            }
         } else if (passwordAttributes.EncryptedDSRMPassword != null) {
-            if (passwordAttributes.EncryptedDSRMPasswordHistory != null && passwordAttributes.EncryptedDSRMPasswordHistory.Length != 0) {
-            }
-            passwordExpUtc = passwordAttributes.PasswordExpiration?.ToUniversalTime();
-            PasswordInfo item = BuildPasswordInfoFromEncryptedPassword(
+            AddEncryptedPasswordSet(
+                outputData,
                 computerNameInfo,
-                PasswordSource.EncryptedDSRMPassword,
                 passwordAttributes.EncryptedDSRMPassword,
+                passwordAttributes.EncryptedDSRMPasswordHistory,
+                PasswordSource.EncryptedDSRMPassword,
+                PasswordSource.EncryptedDSRMPasswordHistory,
                 passwordExpUtc
             );
-            outputData.Add(item);
-            if (IncludeHistory && passwordAttributes.EncryptedDSRMPasswordHistory != null && passwordAttributes.EncryptedDSRMPasswordHistory.Length != 0) {
-                SortedList<DateTime, PasswordInfo> clearTextHistory = new(new DescendingDateTimeComparer());
-                byte[][] encryptedPasswordHistory = passwordAttributes.EncryptedDSRMPasswordHistory;
-                foreach (byte[] encryptedPassword in encryptedPasswordHistory) {
-                    if (encryptedPassword == null || encryptedPassword.Length == 0) {
-                        continue;
-                    }
-                    item = BuildPasswordInfoFromEncryptedPassword(
-                        computerNameInfo,
-                        PasswordSource.EncryptedDSRMPasswordHistory,
-                        encryptedPassword,
-                        null
-                    );
-                    DateTime key;
-                    if (item is PasswordInfoClearText passwordInfoClearText) {
-                        key = passwordInfoClearText.PasswordUpdateTime ?? DateTime.MinValue;
-                    } else {
-                        if (item is not PasswordInfoSecureString) {
-                            throw new ArgumentException("Unexpected password info type");
-                        }
-                        PasswordInfoSecureString passwordInfoSecureString = (PasswordInfoSecureString)item;
-                        key = passwordInfoSecureString.PasswordUpdateTime ?? DateTime.MinValue;
-                    }
-                    clearTextHistory.Add(key, item);
-                }
-                foreach (KeyValuePair<DateTime, PasswordInfo> item3 in clearTextHistory) {
-                    outputData.Add(item3.Value);
-                }
-            }
         } else if (!string.IsNullOrEmpty(passwordAttributes.Password)) {
-            EncryptedPasswordAttributeInner encryptedPasswordAttributeInner = EncryptedPasswordAttributeInner.ParseFromJson(passwordAttributes.Password);
-            passwordExpUtc = passwordAttributes.PasswordExpiration?.ToUniversalTime();
-            PasswordInfo item = BuildPasswordInfo(computerNameInfo, encryptedPasswordAttributeInner.AccountName, encryptedPasswordAttributeInner.Password, encryptedPasswordAttributeInner.PasswordUpdateTimestampUTC, passwordExpUtc, PasswordSource.CleartextPassword, DecryptionStatus.NotApplicable, "NotApplicable");
-            outputData.Add(item);
+            EncryptedPasswordAttributeInner inner = EncryptedPasswordAttributeInner.ParseFromJson(passwordAttributes.Password);
+            outputData.Add(BuildPasswordInfo(
+                computerNameInfo,
+                inner.AccountName,
+                inner.Password,
+                inner.PasswordUpdateTimestampUTC,
+                passwordExpUtc,
+                PasswordSource.CleartextPassword,
+                DecryptionStatus.NotApplicable,
+                "NotApplicable"
+            ));
         } else if (!string.IsNullOrEmpty(passwordAttributes.LegacyPassword)) {
-            passwordExpUtc = passwordAttributes.PasswordExpiration?.ToUniversalTime();
-            PasswordInfo item = BuildPasswordInfo(computerNameInfo, null, passwordAttributes.LegacyPassword, null, passwordExpUtc, PasswordSource.LegacyLapsCleartextPassword, DecryptionStatus.NotApplicable, "NotApplicable");
-            outputData.Add(item);
-        } 
+            outputData.Add(BuildPasswordInfo(
+                computerNameInfo,
+                null,
+                passwordAttributes.LegacyPassword,
+                null,
+                passwordExpUtc,
+                PasswordSource.LegacyLapsCleartextPassword,
+                DecryptionStatus.NotApplicable,
+                "NotApplicable"
+            ));
+        }
+
         return outputData;
     }
     private void InitializeLocalMachineInfo() {
@@ -159,8 +161,8 @@ internal class LapsInternal : IDisposable {
         return BuildPasswordInfo(computerNameInfo, account, password, passwordUpdateTimeUTC, passwordExpirationTimestampUTC, passwordSource, decryptionStatus, encryptedPasswordAttributeState.AuthorizedDecryptorSid);
     }
     private PasswordInfo BuildPasswordInfo(ComputerNameInfo computerNameInfo, string? account, string? password, DateTime? passwordUpdateTimeUTC, DateTime? expirationTimestampUTC, PasswordSource source, DecryptionStatus decryptionStatus, string authorizedDecryptor) {
-        if (AsPlainText) {
-            return new PasswordInfoClearText(
+        return AsPlainText
+            ? new PasswordInfoClearText(
                 computerNameInfo.Name,
                 computerNameInfo.DistinguishedName,
                 account ?? string.Empty,
@@ -170,9 +172,8 @@ internal class LapsInternal : IDisposable {
                 source,
                 decryptionStatus,
                 authorizedDecryptor
-             );
-        }
-        return new PasswordInfoSecureString(
+             )
+            : new PasswordInfoSecureString(
             computerNameInfo.Name,
             computerNameInfo.DistinguishedName,
             account ?? string.Empty,

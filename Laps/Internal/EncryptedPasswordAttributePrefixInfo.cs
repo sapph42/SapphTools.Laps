@@ -1,8 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace SapphTools.Laps.Internal;
 internal readonly struct EncryptedPasswordAttributePrefixInfo {
@@ -15,12 +11,12 @@ internal readonly struct EncryptedPasswordAttributePrefixInfo {
     public static EncryptedPasswordAttributePrefixInfo ParseFromBuffer(byte[] buffer) {
         byte[] converter = new byte[4];
         uint[] attribPrefix = new uint[4];
-        if ((long)buffer.Length <= 16L) {
+        if (buffer.Length <= 16L) {
             throw new ArgumentException("Buffer not big enough");
         }
         for (int i = 0; i < 4; i++) {
             for (int j = 0; j < 4; j++) {
-                converter[j] = buffer[i * 4 + j];
+                converter[j] = buffer[(i * 4) + j];
             }
             attribPrefix[i] = BitConverter.ToUInt32(converter, 0);
         }

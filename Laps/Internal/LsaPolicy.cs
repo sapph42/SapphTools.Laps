@@ -1,10 +1,6 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Runtime.InteropServices;
 using System.Security.Principal;
-using System.Text;
-using System.Threading.Tasks;
 using static SapphTools.Laps.Internal.OSNative;
 
 namespace SapphTools.Laps.Internal;
@@ -96,9 +92,8 @@ internal static class LsaPolicy {
         lSA_OBJECT_ATTRIBUTES.SecurityDescriptor = IntPtr.Zero;
         lSA_OBJECT_ATTRIBUTES.SecurityQualityOfService = IntPtr.Zero;
         LSA_OBJECT_ATTRIBUTES ObjectAttributes = lSA_OBJECT_ATTRIBUTES;
-        if (LsaNtStatusToWinError(LsaOpenPolicy(ref SystemName, ref ObjectAttributes, desiredAccess, out PolicyHandle)) != 0) {
-            throw new Exception("LsaOpenPolicy failed");
-        }
-        return PolicyHandle;
+        return LsaNtStatusToWinError(LsaOpenPolicy(ref SystemName, ref ObjectAttributes, desiredAccess, out PolicyHandle)) != 0
+            ? throw new Exception("LsaOpenPolicy failed")
+            : PolicyHandle;
     }
 }

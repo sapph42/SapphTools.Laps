@@ -5,11 +5,10 @@ using System.Globalization;
 using System.Linq;
 using System.Net;
 using System.Runtime.InteropServices;
-using System.Security.Principal;
 using System.Security;
+using System.Security.Principal;
 using System.Text;
 using System.Text.RegularExpressions;
-using System.Threading.Tasks;
 using static SapphTools.Laps.Internal.LapsNative;
 using static SapphTools.Laps.Internal.OSNative;
 
@@ -39,19 +38,14 @@ internal static partial class LapsStatic {
         NetworkCredential credential2;
         WindowsIdentity identity = WindowsIdentity.GetCurrent();
         WindowsPrincipal principal = new(identity);
-        if (principal.IsInRole(WindowsBuiltInRole.Administrator)) {
-            credential2 = CredentialCache.DefaultNetworkCredentials;
-        } else {
-            throw new LapsException("Must run elevated!");
-        }
-        LdapConnection result;
-        if (!string.IsNullOrEmpty(DomainController) && port.HasValue) {
-            result = GetLdapServerConnection(DomainController!, port, credential2);
-        } else if (!string.IsNullOrEmpty(Domain)) {
-            result = GetLdapConnection(Domain, writable: true, credential2);
-        } else {
-            result = GetLdapConnection(null, writable: true, credential2);
-        }
+        credential2 = principal.IsInRole(WindowsBuiltInRole.Administrator)
+            ? CredentialCache.DefaultNetworkCredentials
+            : throw new LapsException("Must run elevated!");
+        LdapConnection result = !string.IsNullOrEmpty(DomainController) && port.HasValue
+            ? GetLdapServerConnection(DomainController!, port, credential2)
+            : !string.IsNullOrEmpty(Domain)
+                ? GetLdapConnection(Domain, writable: true, credential2)
+                : GetLdapConnection(null, writable: true, credential2);
         return result;
     }
     public static SecureString ConvertStringToSecureString(string someString) {
@@ -68,12 +62,12 @@ internal static partial class LapsStatic {
         decryptedBytes = Array.Empty<byte>();
         uint num;
         try {
-            AllocateNativeBuffer(encryptedData, out pbBuffer, out var cbBuffer);
-            num = DecryptNormalMode(hDecryptionToken, pbBuffer, cbBuffer, 0u, out pbDecryptedData, out var cbDecryptedData);
+            AllocateNativeBuffer(encryptedData, out pbBuffer, out uint cbBuffer);
+            num = DecryptNormalMode(hDecryptionToken, pbBuffer, cbBuffer, 0u, out pbDecryptedData, out uint cbDecryptedData);
             if (num != 0) {
                 return num;
             }
-            AllocateManagedBuffer(pbDecryptedData, cbDecryptedData, out var bytes);
+            AllocateManagedBuffer(pbDecryptedData, cbDecryptedData, out byte[]? bytes);
             decryptedBytes = bytes;
         } catch (Exception) {
             num = 2147483650u;
@@ -101,7 +95,7 @@ internal static partial class LapsStatic {
         IntPtr pbBuffer = IntPtr.Zero;
         string pszSidProtectionString = "<unavailable>";
         try {
-            AllocateNativeBuffer(encryptedData, out pbBuffer, out var cbBuffer);
+            AllocateNativeBuffer(encryptedData, out pbBuffer, out uint cbBuffer);
             uint sidProtectionString = GetSidProtectionString(
                 pbBuffer,
                 cbBuffer,
@@ -128,38 +122,38 @@ internal static partial class LapsStatic {
         string? samAccountName = null;
         string? dnsHostName = null;
         string[] value = { "name", "distinguishedName", "samAccountName", "dnsHostName" };
-        string text2;
+        string filter;
         if (Identity.StartsWith("CN=", StringComparison.InvariantCultureIgnoreCase)) {
-            string text = EscapeDNForFilter(Identity);
-            text2 = string.Format(CultureInfo.InvariantCulture, "(&(objectClass={0})({1}={2}))", "computer", "distinguishedName", text);
-        } else if (Identity[^1] == '$') {
-            text2 = string.Format(CultureInfo.InvariantCulture, "(&(objectClass={0})({1}={2}))", "computer", "samAccountName", Identity);
-        } else if (Identity.Contains('.')) {
-            text2 = string.Format(CultureInfo.InvariantCulture, "(&(objectClass={0})({1}={2}))", "computer", "dnsHostName", Identity);
+            string escapedDn = EscapeDNForFilter(Identity);
+            filter = string.Format(CultureInfo.InvariantCulture, "(&(objectClass={0})({1}={2}))", "computer", "distinguishedName", escapedDn);
         } else {
-            text2 = string.Format(CultureInfo.InvariantCulture, "(&(objectClass={0})({1}={2}))", "computer", "name", Identity);
+            filter = Identity[^1] == '$'
+                ? string.Format(CultureInfo.InvariantCulture, "(&(objectClass={0})({1}={2}))", "computer", "samAccountName", Identity)
+                : Identity.Contains('.')
+                            ? string.Format(CultureInfo.InvariantCulture, "(&(objectClass={0})({1}={2}))", "computer", "dnsHostName", Identity)
+                            : string.Format(CultureInfo.InvariantCulture, "(&(objectClass={0})({1}={2}))", "computer", "name", Identity);
         }
         SearchRequest searchRequest = new() {
             DistinguishedName = ldapConnectionInfo.Domain.DomainNC,
-            Filter = text2,
+            Filter = filter,
             Scope = SearchScope.Subtree
         };
         searchRequest.Attributes.AddRange(value);
         SearchResponse? searchResponse = ldapConn.SendRequest(searchRequest) as SearchResponse;
         if (searchResponse is not null && searchResponse.Entries.Count != 1) {
-            string text3;
+            string exceptionText;
             if (searchResponse.Entries.Count == 0) {
-                text3 = $"Failed to find the '{Identity}' computer in AD";
+                exceptionText = $"Failed to find the '{Identity}' computer in AD";
             } else {
                 StringBuilder stringBuilder = new();
-                text3 = $"Found multiple ({searchResponse.Entries.Count}) results  for the target '{Identity}' identity in AD:";
-                stringBuilder.AppendLine(text3);
+                exceptionText = $"Found multiple ({searchResponse.Entries.Count}) results  for the target '{Identity}' identity in AD:";
+                stringBuilder.AppendLine(exceptionText);
                 for (int i = 0; i < searchResponse.Entries.Count; i++) {
                     SearchResultEntry searchResultEntry = searchResponse.Entries[i];
                     stringBuilder.AppendLine(searchResultEntry.DistinguishedName);
                 }
             }
-            throw new LapsException(text3);
+            throw new LapsException(exceptionText);
         }
         SearchResultEntry? searchResultEntry2 = searchResponse?.Entries[0];
         if (searchResultEntry2 is not null && searchResultEntry2.Attributes.Contains("name")) {
@@ -196,71 +190,57 @@ internal static partial class LapsStatic {
         return ldapConnection;
     }
     private static LdapConnection GetLdapConnection(string? domainName, bool writable, NetworkCredential credential) {
-        uint num = 1073741840u;
+        const uint DS_RETURN_DNS_NAME = 0x40000010;
+        const uint DS_DIRECTORY_SERVICE_REQUIRED = 0x00000010;
+        const uint DS_IS_DNS_NAME = 0x1000;
+        uint flags = DS_RETURN_DNS_NAME | DS_DIRECTORY_SERVICE_REQUIRED;
         if (writable) {
-            num |= 0x1000;
+            flags |= DS_IS_DNS_NAME;
         }
-        DCLocator dCLocatorInfo = DCLocator.LocateDCNoThrow(null, domainName, null, num)
+        DCLocator dCLocatorInfo = DCLocator.LocateDCNoThrow(null, domainName, null, flags)
             ?? throw new LapsException($"Failed to locate a domain controller in the '{domainName}' domain");
 
         return GetConnectionWorker(dCLocatorInfo.DomainControllerName, null, credential);
     }
     public static LdapConnectionInfo GetLdapConnectionInfo(LdapConnection ldapConn) {
-        string[] value = { "configurationNamingContext", "defaultNamingContext", "dnsHostName", "rootDomainNamingContext", "schemaNamingContext", "domainControllerFunctionality", "domainFunctionality", "forestFunctionality", "supportedCapabilities" };
-        SearchRequest searchRequest = new();
-        searchRequest.Attributes.AddRange(value);
-        searchRequest.Scope = SearchScope.Base;
-        SearchResponse obj = (SearchResponse)ldapConn.SendRequest(searchRequest);
-        string text = (string)obj.Entries[0].Attributes["rootDomainNamingContext"].GetValues(typeof(string))[0];
-        string arg = (string)obj.Entries[0].Attributes["defaultNamingContext"].GetValues(typeof(string))[0];
-        string text2 = (string)obj.Entries[0].Attributes["configurationNamingContext"].GetValues(typeof(string))[0];
-        string text3 = (string)obj.Entries[0].Attributes["schemaNamingContext"].GetValues(typeof(string))[0];
-        string domainNC = (string)obj.Entries[0].Attributes["defaultNamingContext"].GetValues(typeof(string))[0];
-        string dnsHostNameDC = (string)obj.Entries[0].Attributes["dnsHostName"].GetValues(typeof(string))[0];
-        string text4 = (string)obj.Entries[0].Attributes["domainControllerFunctionality"].GetValues(typeof(string))[0];
-        int dcFunctionalLevel = ((!string.IsNullOrEmpty(text4)) ? int.Parse(text4, NumberFormatInfo.InvariantInfo) : 0);
-        text4 = (string)obj.Entries[0].Attributes["domainFunctionality"].GetValues(typeof(string))[0];
-        int domainFunctionalLevel = ((!string.IsNullOrEmpty(text4)) ? int.Parse(text4, NumberFormatInfo.InvariantInfo) : 0);
-        text4 = (string)obj.Entries[0].Attributes["forestFunctionality"].GetValues(typeof(string))[0];
-        int forestFunctionalLevel = ((!string.IsNullOrEmpty(text4)) ? int.Parse(text4, NumberFormatInfo.InvariantInfo) : 0);
-        bool isRODC = false;
-        byte[][] array = (byte[][])obj.Entries[0].Attributes["supportedCapabilities"].GetValues(typeof(byte[]));
-        foreach (byte[] array2 in array) {
-            string @string = Encoding.UTF8.GetString(array2, 0, array2.Length);
-            if (StringComparer.InvariantCultureIgnoreCase.Equals(@string, "1.2.840.113556.1.4.1920")) {
-                isRODC = true;
-                break;
-            }
+        var baseRequest = new SearchRequest {
+            Scope = SearchScope.Base,
+            Attributes =
+            {
+            "configurationNamingContext",
+            "defaultNamingContext",
+            "dnsHostName",
+            "rootDomainNamingContext",
+            "schemaNamingContext",
+            "domainControllerFunctionality",
+            "domainFunctionality",
+            "forestFunctionality",
+            "supportedCapabilities"
         }
-        searchRequest = new SearchRequest {
-            DistinguishedName = "CN=Partitions," + text2,
-            Scope = SearchScope.OneLevel
         };
-        searchRequest.Attributes.Add("dnsRoot");
-        searchRequest.Filter = string.Format(CultureInfo.InvariantCulture, "(&(objectClass={0})({1}={2}))", "crossRef", "nCName", arg);
-        string domainDnsHostName = (string)((SearchResponse)ldapConn.SendRequest(searchRequest)).Entries[0].Attributes["dnsRoot"].GetValues(typeof(string))[0];
-        searchRequest = new SearchRequest {
-            DistinguishedName = "CN=Partitions," + text2,
-            Scope = SearchScope.OneLevel
-        };
-        searchRequest.Attributes.Add("dnsRoot");
-        searchRequest.Filter = string.Format(CultureInfo.InvariantCulture, "(&(objectClass={0})({1}={2}))", "crossRef", "nCName", text);
-        string rootDomainDnsHostName = (string)((SearchResponse)ldapConn.SendRequest(searchRequest)).Entries[0].Attributes["dnsRoot"].GetValues(typeof(string))[0];
-        searchRequest = new SearchRequest {
-            DistinguishedName = text3,
-            Scope = SearchScope.Base
-        };
-        searchRequest.Attributes.Add("fSMORoleOwner");
 
-        string distinguishedName = ((string)((SearchResponse)ldapConn.SendRequest(searchRequest)).Entries[0].Attributes["fSMORoleOwner"].GetValues(typeof(string))[0])["CN=NTDS Settings,".Length..];
-        searchRequest = new SearchRequest {
-            DistinguishedName = distinguishedName,
-            Scope = SearchScope.Base
-        };
-        searchRequest.Attributes.Add("dnsHostName");
-        string schemaNamingMaster = (string)((SearchResponse)ldapConn.SendRequest(searchRequest)).Entries[0].Attributes["dnsHostName"].GetValues(typeof(string))[0];
-        ForestInfo forestInfo = new(rootDomainDnsHostName, text, text2, text3, schemaNamingMaster, forestFunctionalLevel);
-        DomainInfo domainInfo = new(domainDnsHostName, domainNC, domainFunctionalLevel);
+        var rootResponse = (SearchResponse)ldapConn.SendRequest(baseRequest);
+        var entry = rootResponse.Entries[0];
+
+        string configurationNC = GetSingleString(entry, "configurationNamingContext");
+        string defaultNC = GetSingleString(entry, "defaultNamingContext");
+        string dnsHostNameDC = GetSingleString(entry, "dnsHostName");
+        string rootDomainNC = GetSingleString(entry, "rootDomainNamingContext");
+        string schemaNC = GetSingleString(entry, "schemaNamingContext");
+
+        int dcFunctionalLevel = ParseIntAttribute(entry, "domainControllerFunctionality");
+        int domainFunctionalLevel = ParseIntAttribute(entry, "domainFunctionality");
+        int forestFunctionalLevel = ParseIntAttribute(entry, "forestFunctionality");
+
+        bool isRODC = GetStringListFromBytes(entry.Attributes, "supportedCapabilities")
+            .Any(v => StringComparer.OrdinalIgnoreCase.Equals(v, "1.2.840.113556.1.4.1920"));
+
+        string domainDnsHostName = LookupDnsRoot(ldapConn, configurationNC, defaultNC);
+        string rootDomainDnsHostName = LookupDnsRoot(ldapConn, configurationNC, rootDomainNC);
+        string schemaNamingMaster = LookupSchemaNamingMaster(ldapConn, schemaNC);
+
+        var forestInfo = new ForestInfo(rootDomainDnsHostName, rootDomainNC, configurationNC, schemaNC, schemaNamingMaster, forestFunctionalLevel);
+        var domainInfo = new DomainInfo(domainDnsHostName, defaultNC, domainFunctionalLevel);
         return new LdapConnectionInfo(dnsHostNameDC, dcFunctionalLevel, isRODC, forestInfo, domainInfo);
     }
     private static LdapConnection GetLdapServerConnection(string serverName, int? port, NetworkCredential? credential = null) {
@@ -339,6 +319,33 @@ internal static partial class LapsStatic {
             legacyPasswordExpiration
         );
     }
+    private static string GetSingleString(SearchResultEntry entry, string attributeName) {
+        return (string)entry.Attributes[attributeName].GetValues(typeof(string))[0];
+    }
+    private static IEnumerable<string> GetStringListFromBytes(SearchResultAttributeCollection attributes, string attrName) {
+        return attributes[attrName]
+            .GetValues(typeof(byte[]))
+            .Cast<byte[]>()
+            .Select(b => Encoding.UTF8.GetString(b));
+    }
+    private static string LookupDnsRoot(LdapConnection conn, string configNC, string ncName) {
+        string partitionDN = $"CN=Partitions,{configNC}";
+        string filter = $"(&(objectClass=crossRef)(nCName={ncName}))";
+        var request = new SearchRequest(partitionDN, filter, SearchScope.OneLevel, "dnsRoot");
+
+        var response = (SearchResponse)conn.SendRequest(request);
+        return GetSingleString(response.Entries[0], "dnsRoot");
+    }
+    private static string LookupSchemaNamingMaster(LdapConnection conn, string schemaNC) {
+        var roleOwnerRequest = new SearchRequest(schemaNC, "(objectClass=*)", SearchScope.Base, "fSMORoleOwner");
+        var roleOwnerEntry = (SearchResponse)conn.SendRequest(roleOwnerRequest);
+        string ownerDN = GetSingleString(roleOwnerEntry.Entries[0], "fSMORoleOwner");
+        string serverDN = ownerDN["CN=NTDS Settings,".Length..];
+
+        var dnsRequest = new SearchRequest(serverDN, "(objectClass=*)", SearchScope.Base, "dnsHostName");
+        var dnsEntry = (SearchResponse)conn.SendRequest(dnsRequest);
+        return GetSingleString(dnsEntry.Entries[0], "dnsHostName");
+    }
     public static EncryptedPasswordAttributeState ParseAndDecryptDirectoryPassword(IntPtr hDecryptionToken, byte[] encryptedPasswordBytes, out DecryptionStatus decryptionStatus) {
         byte[] trailingBytes = Array.Empty<byte>();
         EncryptedPasswordAttributePrefixInfo encryptedPasswordAttributePrefixInfo = EncryptedPasswordAttributePrefixInfo.ParseFromBuffer(encryptedPasswordBytes);
@@ -367,14 +374,16 @@ internal static partial class LapsStatic {
         }
         return new EncryptedPasswordAttributeState(authorizedDecryptorSid, encryptedPasswordAttributePrefixInfo, innerState, trailingBytes);
     }
+    private static int ParseIntAttribute(SearchResultEntry entry, string attributeName) {
+        string value = (string)entry.Attributes[attributeName].GetValues(typeof(string))[0];
+        return string.IsNullOrEmpty(value) ? 0 : int.Parse(value, NumberFormatInfo.InvariantInfo);
+    }
     public static string QueryLocalComputerName(COMPUTER_NAME_FORMAT nameFormat) {
         StringBuilder stringBuilder = new(300);
         int lpnSize = 300;
-        if (!GetComputerNameEx(nameFormat, stringBuilder, ref lpnSize)) {
-            throw new InvalidOperationException("Unable to query the local computer name");
-        }
-        return stringBuilder.ToString();
-
+        return !GetComputerNameEx(nameFormat, stringBuilder, ref lpnSize)
+            ? throw new InvalidOperationException("Unable to query the local computer name")
+            : stringBuilder.ToString();
         [DllImport("Kernel32.dll", CharSet = CharSet.Unicode, EntryPoint = "GetComputerNameExW", ExactSpelling = true, SetLastError = true)]
         [return: MarshalAs(UnmanagedType.Bool)]
         static extern bool GetComputerNameEx([In] COMPUTER_NAME_FORMAT NameType, [Out][MarshalAs(UnmanagedType.LPWStr)] StringBuilder lpBuffer, [In][Out][MarshalAs(UnmanagedType.U4)] ref int lpnSize);

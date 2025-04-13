@@ -74,5 +74,7 @@ public class Laps {
     /// <returns>
     /// A collection of <see cref="PasswordInfo"/> objects representing the retrieved LAPS credentials.
     /// </returns>
-    public IEnumerable<PasswordInfo> GetPasswordInfo(string identity) => laps.ProcessIdentity(identity);
+    public IEnumerable<PasswordInfo> GetPasswordInfo(string identity) {
+        return laps.ProcessIdentity(identity);
+    }
 }

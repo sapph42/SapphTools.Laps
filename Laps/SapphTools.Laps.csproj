@@ -6,7 +6,7 @@
     <Nullable>enable</Nullable>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
     <Warnings>1591</Warnings>
-	<RuntimeIdentifier>win</RuntimeIdentifier>
+    <RuntimeIdentifier>win</RuntimeIdentifier>
   </PropertyGroup>
   <PropertyGroup>
     <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
@@ -90,6 +90,14 @@
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>
+    <PackageReference Include="Costura.Fody">
+      <Version>6.0.0</Version>
+      <PrivateAssets>all</PrivateAssets>
+    </PackageReference>
+    <PackageReference Include="Fody">
+      <Version>6.9.2</Version>
+      <PrivateAssets>all</PrivateAssets>
+    </PackageReference>
     <PackageReference Include="IndexRange">
       <Version>1.0.3</Version>
     </PackageReference>
@@ -105,6 +113,9 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="laps.snk" />
+  </ItemGroup>
+  <ItemGroup>
+    <Content Include="FodyWeavers.xml" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>

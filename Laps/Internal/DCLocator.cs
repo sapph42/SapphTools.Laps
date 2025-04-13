@@ -26,7 +26,7 @@ internal class DCLocator {
         ClientSiteName = clientSiteName;
     }
     public DCLocator(DOMAIN_CONTROLLER_INFO info) : this(
-        info.DomainControllerName.Substring(2),
+        info.DomainControllerName[2..],
         info.DomainControllerAddress,
         info.DomainControllerAddressType,
         info.DomainGuid,
@@ -40,10 +40,12 @@ internal class DCLocator {
         return LocateDCNoThrow(ComputerName, DomainName, SiteName, Flags) ?? throw new Exception("DClocator failed");
     }
     public static DCLocator? LocateDCNoThrow(string? ComputerName, string? DomainName, string? SiteName, uint Flags) {
-        if ((Flags & 0x80000000u) != 0) {
+        const uint DS_RETURN_FLAT_NAME = 0x80000000u;
+        const uint DS_RETURN_DNS_NAME = 0x40000000;
+        if ((Flags & DS_RETURN_FLAT_NAME) != 0) {
             throw new ArgumentException("Should never request flat name");
         }
-        Flags |= 0x40000000;
+        Flags |= DS_RETURN_DNS_NAME;
         ComputerName ??= string.Empty;
         DomainName ??= string.Empty;
         SiteName ??= string.Empty;
