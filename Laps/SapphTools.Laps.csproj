@@ -1,0 +1,107 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props')" />
+  <PropertyGroup>
+    <LangVersion>10.0</LangVersion>
+    <Nullable>enable</Nullable>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <Warnings>1591</Warnings>
+  </PropertyGroup>
+  <PropertyGroup>
+    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
+    <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
+    <ProjectGuid>{816E8642-1D65-4230-A299-17938AD28615}</ProjectGuid>
+    <OutputType>Library</OutputType>
+    <AppDesignerFolder>Properties</AppDesignerFolder>
+    <RootNamespace>SapphTools.Laps</RootNamespace>
+    <AssemblyName>SapphTools.Laps</AssemblyName>
+    <TargetFrameworkVersion>v4.8.1</TargetFrameworkVersion>
+    <FileAlignment>512</FileAlignment>
+    <Deterministic>true</Deterministic>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
+    <DebugSymbols>true</DebugSymbols>
+    <DebugType>full</DebugType>
+    <Optimize>false</Optimize>
+    <OutputPath>bin\Debug\</OutputPath>
+    <DefineConstants>DEBUG;TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+    <Nullable>enable</Nullable>
+    <DocumentationFile>docs\SapphTools.Laps.xml</DocumentationFile>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
+    <DebugType>pdbonly</DebugType>
+    <Optimize>true</Optimize>
+    <OutputPath>bin\Release\</OutputPath>
+    <DefineConstants>TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+  <PropertyGroup>
+    <SignAssembly>true</SignAssembly>
+  </PropertyGroup>
+  <PropertyGroup>
+    <AssemblyOriginatorKeyFile>
+    </AssemblyOriginatorKeyFile>
+  </PropertyGroup>
+  <ItemGroup>
+    <Reference Include="System" />
+    <Reference Include="System.Core" />
+    <Reference Include="System.DirectoryServices" />
+    <Reference Include="System.DirectoryServices.Protocols" />
+    <Reference Include="System.Runtime.Serialization" />
+    <Reference Include="System.Xml.Linq" />
+    <Reference Include="System.Data.DataSetExtensions" />
+    <Reference Include="Microsoft.CSharp" />
+    <Reference Include="System.Data" />
+    <Reference Include="System.Net.Http" />
+    <Reference Include="System.Xml" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="DecryptionStatus.cs" />
+    <Compile Include="Internal\AccountPasswordAttributes.cs" />
+    <Compile Include="Internal\ComputerNameInfo.cs" />
+    <Compile Include="Internal\DCLocator.cs" />
+    <Compile Include="Internal\DescendingDateTimeComparer.cs" />
+    <Compile Include="Internal\DomainInfo.cs" />
+    <Compile Include="Internal\EncryptedPasswordAttributeInner.cs" />
+    <Compile Include="Internal\EncryptedPasswordAttributePrefixInfo.cs" />
+    <Compile Include="Internal\EncryptedPasswordAttributeRaw.cs" />
+    <Compile Include="Internal\EncryptedPasswordAttributeState.cs" />
+    <Compile Include="Internal\ForestInfo.cs" />
+    <Compile Include="Internal\LapsInternal.cs" />
+    <Compile Include="Internal\LapsNative.cs" />
+    <Compile Include="Internal\LapsStatic.cs" />
+    <Compile Include="Internal\LdapConnectionInfo.cs" />
+    <Compile Include="Internal\LocalMachineInfo.cs" />
+    <Compile Include="Internal\LsaDnsDomainInfo.cs" />
+    <Compile Include="Internal\LsaDomainInfo.cs" />
+    <Compile Include="Internal\LsaPolicy.cs" />
+    <Compile Include="Internal\OSNative.cs" />
+    <Compile Include="Laps.cs" />
+    <Compile Include="LapsException.cs" />
+    <Compile Include="PasswordInfo.cs" />
+    <Compile Include="PasswordInfoClearText.cs" />
+    <Compile Include="PasswordInfoSecureString.cs" />
+    <Compile Include="PasswordSource.cs" />
+    <Compile Include="Properties\AssemblyInfo.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="IndexRange">
+      <Version>1.0.3</Version>
+    </PackageReference>
+    <PackageReference Include="System.DirectoryServices">
+      <Version>9.0.4</Version>
+    </PackageReference>
+    <PackageReference Include="System.Security.AccessControl">
+      <Version>6.0.1</Version>
+    </PackageReference>
+  </ItemGroup>
+  <ItemGroup>
+    <Folder Include="docs\" />
+  </ItemGroup>
+  <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
+</Project>

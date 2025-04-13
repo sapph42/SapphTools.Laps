@@ -1,0 +1,156 @@
+### YamlMime:ManagedReference
+items:
+- uid: SapphTools.Laps.DecryptionStatus
+  commentId: T:SapphTools.Laps.DecryptionStatus
+  id: DecryptionStatus
+  parent: SapphTools.Laps
+  children:
+  - SapphTools.Laps.DecryptionStatus.Error
+  - SapphTools.Laps.DecryptionStatus.NotApplicable
+  - SapphTools.Laps.DecryptionStatus.Success
+  - SapphTools.Laps.DecryptionStatus.Unauthorized
+  langs:
+  - csharp
+  - vb
+  name: DecryptionStatus
+  nameWithType: DecryptionStatus
+  fullName: SapphTools.Laps.DecryptionStatus
+  type: Enum
+  source:
+    id: DecryptionStatus
+    path: C:\Users\nickgibson\source\repos\Laps\Laps\DecryptionStatus.cs
+    startLine: 5
+  assemblies:
+  - SapphTools.Laps
+  namespace: SapphTools.Laps
+  summary: Indicates the outcome of decrypting a LAPS password.
+  example: []
+  syntax:
+    content: public enum DecryptionStatus
+    content.vb: Public Enum DecryptionStatus
+- uid: SapphTools.Laps.DecryptionStatus.NotApplicable
+  commentId: F:SapphTools.Laps.DecryptionStatus.NotApplicable
+  id: NotApplicable
+  parent: SapphTools.Laps.DecryptionStatus
+  langs:
+  - csharp
+  - vb
+  name: NotApplicable
+  nameWithType: DecryptionStatus.NotApplicable
+  fullName: SapphTools.Laps.DecryptionStatus.NotApplicable
+  type: Field
+  source:
+    id: NotApplicable
+    path: C:\Users\nickgibson\source\repos\Laps\Laps\DecryptionStatus.cs
+    startLine: 9
+  assemblies:
+  - SapphTools.Laps
+  namespace: SapphTools.Laps
+  summary: Decryption was not attempted or is not applicable (e.g., clear-text password).
+  example: []
+  syntax:
+    content: NotApplicable = 0
+    return:
+      type: SapphTools.Laps.DecryptionStatus
+- uid: SapphTools.Laps.DecryptionStatus.Success
+  commentId: F:SapphTools.Laps.DecryptionStatus.Success
+  id: Success
+  parent: SapphTools.Laps.DecryptionStatus
+  langs:
+  - csharp
+  - vb
+  name: Success
+  nameWithType: DecryptionStatus.Success
+  fullName: SapphTools.Laps.DecryptionStatus.Success
+  type: Field
+  source:
+    id: Success
+    path: C:\Users\nickgibson\source\repos\Laps\Laps\DecryptionStatus.cs
+    startLine: 14
+  assemblies:
+  - SapphTools.Laps
+  namespace: SapphTools.Laps
+  summary: The password was successfully decrypted.
+  example: []
+  syntax:
+    content: Success = 1
+    return:
+      type: SapphTools.Laps.DecryptionStatus
+- uid: SapphTools.Laps.DecryptionStatus.Unauthorized
+  commentId: F:SapphTools.Laps.DecryptionStatus.Unauthorized
+  id: Unauthorized
+  parent: SapphTools.Laps.DecryptionStatus
+  langs:
+  - csharp
+  - vb
+  name: Unauthorized
+  nameWithType: DecryptionStatus.Unauthorized
+  fullName: SapphTools.Laps.DecryptionStatus.Unauthorized
+  type: Field
+  source:
+    id: Unauthorized
+    path: C:\Users\nickgibson\source\repos\Laps\Laps\DecryptionStatus.cs
+    startLine: 19
+  assemblies:
+  - SapphTools.Laps
+  namespace: SapphTools.Laps
+  summary: The current user is not authorized to decrypt the password.
+  example: []
+  syntax:
+    content: Unauthorized = 2
+    return:
+      type: SapphTools.Laps.DecryptionStatus
+- uid: SapphTools.Laps.DecryptionStatus.Error
+  commentId: F:SapphTools.Laps.DecryptionStatus.Error
+  id: Error
+  parent: SapphTools.Laps.DecryptionStatus
+  langs:
+  - csharp
+  - vb
+  name: Error
+  nameWithType: DecryptionStatus.Error
+  fullName: SapphTools.Laps.DecryptionStatus.Error
+  type: Field
+  source:
+    id: Error
+    path: C:\Users\nickgibson\source\repos\Laps\Laps\DecryptionStatus.cs
+    startLine: 24
+  assemblies:
+  - SapphTools.Laps
+  namespace: SapphTools.Laps
+  summary: An unexpected error occurred during decryption.
+  example: []
+  syntax:
+    content: Error = 3
+    return:
+      type: SapphTools.Laps.DecryptionStatus
+references:
+- uid: SapphTools.Laps
+  commentId: N:SapphTools.Laps
+  href: SapphTools.html
+  name: SapphTools.Laps
+  nameWithType: SapphTools.Laps
+  fullName: SapphTools.Laps
+  spec.csharp:
+  - uid: SapphTools
+    name: SapphTools
+    href: SapphTools.html
+  - name: .
+  - uid: SapphTools.Laps
+    name: Laps
+    href: SapphTools.Laps.html
+  spec.vb:
+  - uid: SapphTools
+    name: SapphTools
+    href: SapphTools.html
+  - name: .
+  - uid: SapphTools.Laps
+    name: Laps
+    href: SapphTools.Laps.html
+- uid: SapphTools.Laps.DecryptionStatus
+  commentId: T:SapphTools.Laps.DecryptionStatus
+  parent: SapphTools.Laps
+  href: SapphTools.Laps.DecryptionStatus.html
+  name: DecryptionStatus
+  nameWithType: DecryptionStatus
+  fullName: SapphTools.Laps.DecryptionStatus

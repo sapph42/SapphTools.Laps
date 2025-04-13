@@ -1,0 +1,28 @@
+### YamlMime:TableOfContent
+items:
+- uid: SapphTools.Laps
+  name: SapphTools.Laps
+  type: Namespace
+  items:
+  - uid: SapphTools.Laps.DecryptionStatus
+    name: DecryptionStatus
+    type: Enum
+  - uid: SapphTools.Laps.Laps
+    name: Laps
+    type: Class
+  - uid: SapphTools.Laps.LapsException
+    name: LapsException
+    type: Class
+  - uid: SapphTools.Laps.PasswordInfo
+    name: PasswordInfo
+    type: Class
+  - uid: SapphTools.Laps.PasswordInfoClearText
+    name: PasswordInfoClearText
+    type: Class
+  - uid: SapphTools.Laps.PasswordInfoSecureString
+    name: PasswordInfoSecureString
+    type: Class
+  - uid: SapphTools.Laps.PasswordSource
+    name: PasswordSource
+    type: Enum
+memberLayout: SamePage

@@ -1,0 +1,223 @@
+<?xml version="1.0"?>
+<doc>
+    <assembly>
+        <name>SapphTools.Laps</name>
+    </assembly>
+    <members>
+        <member name="T:SapphTools.Laps.DecryptionStatus">
+            <summary>
+            Indicates the outcome of decrypting a LAPS password.
+            </summary>
+        </member>
+        <member name="F:SapphTools.Laps.DecryptionStatus.NotApplicable">
+            <summary>
+            Decryption was not attempted or is not applicable (e.g., clear-text password).
+            </summary>
+        </member>
+        <member name="F:SapphTools.Laps.DecryptionStatus.Success">
+            <summary>
+            The password was successfully decrypted.
+            </summary>
+        </member>
+        <member name="F:SapphTools.Laps.DecryptionStatus.Unauthorized">
+            <summary>
+            The current user is not authorized to decrypt the password.
+            </summary>
+        </member>
+        <member name="F:SapphTools.Laps.DecryptionStatus.Error">
+            <summary>
+            An unexpected error occurred during decryption.
+            </summary>
+        </member>
+        <member name="T:SapphTools.Laps.Laps">
+            <summary>
+            Provides a public interface for querying LAPS-managed local administrator passwords from Active Directory,
+            including support for historical credentials, snapshots, and cleartext or secure string output formats.
+            </summary>
+        </member>
+        <member name="P:SapphTools.Laps.Laps.Domain">
+            <summary>
+            Specifies the name of the Active Directory domain to connect to.
+            If not set, the current domain of the executing machine will be used.
+            </summary>
+        </member>
+        <member name="P:SapphTools.Laps.Laps.DomainController">
+            <summary>
+            Specifies the domain controller to query, or the remote server hosting an AD Snapshot Browser instance.
+            </summary>
+        </member>
+        <member name="P:SapphTools.Laps.Laps.IncludeHistory">
+            <summary>
+            Indicates whether to return older (historical) LAPS credentials associated with the computer object, if available.
+            </summary>
+        </member>
+        <member name="P:SapphTools.Laps.Laps.AsPlainText">
+            <summary>
+            If set to <c>true</c>, passwords will be returned in cleartext.
+            If <c>false</c> (default), passwords will be returned as <see cref="T:System.Security.SecureString"/> objects.
+            </summary>
+        </member>
+        <member name="P:SapphTools.Laps.Laps.Port">
+            <summary>
+            Specifies the port used when connecting to an Active Directory Snapshot Browser server.
+            </summary>
+        </member>
+        <member name="M:SapphTools.Laps.Laps.#ctor">
+            <summary>
+            Initializes a new instance of the <see cref="T:SapphTools.Laps.Laps"/> class.
+            The <see cref="P:SapphTools.Laps.Laps.Domain"/> property will default to the currently joined domain.
+            </summary>
+        </member>
+        <member name="M:SapphTools.Laps.Laps.GetPasswordInfo(System.String)">
+            <summary>
+            Queries Windows LAPS (Local Administrator Password Solution) credentials from Active Directory for a specified computer identity.
+            </summary>
+            <remarks>
+            The following input formats are supported for <paramref name="identity"/>:
+            <list type="bullet">
+              <item><description><c>distinguishedName</c> (begins with <c>CN=</c>)</description></item>
+              <item><description><c>samAccountName</c> (typically ends with a <c>$</c>)</description></item>
+              <item><description><c>dnsHostName</c> (contains at least one period <c>.</c>)</description></item>
+              <item><description><c>name</c> (used when no other format matches)</description></item>
+            </list>
+            </remarks>
+            <param name="identity">The name or identifier of the computer to retrieve LAPS credentials for.</param>
+            <returns>
+            A collection of <see cref="T:SapphTools.Laps.PasswordInfo"/> objects representing the retrieved LAPS credentials.
+            </returns>
+        </member>
+        <member name="T:SapphTools.Laps.LapsException">
+            <summary>
+            Extends <see cref="T:System.Exception"/>. Does not provide additional functionality.
+            </summary>
+        </member>
+        <member name="M:SapphTools.Laps.LapsException.#ctor(System.String)">
+            <summary>
+            Forwards to <see cref="M:System.Exception.#ctor(System.String)"/>.
+            </summary>
+            <param name="message"></param>
+        </member>
+        <member name="M:SapphTools.Laps.LapsException.#ctor">
+            <summary>
+            Default constructor.
+            </summary>
+        </member>
+        <member name="T:SapphTools.Laps.PasswordInfo">
+            <summary>
+            Represents metadata about a LAPS-managed account password, including its source, decryption status, and associated machine/account information.
+            </summary>
+        </member>
+        <member name="P:SapphTools.Laps.PasswordInfo.ComputerName">
+            <summary>
+            The NetBIOS or DNS name of the computer associated with the password.
+            </summary>
+        </member>
+        <member name="P:SapphTools.Laps.PasswordInfo.DistinguishedName">
+            <summary>
+            The full Active Directory distinguished name (DN) of the computer object.
+            </summary>
+        </member>
+        <member name="P:SapphTools.Laps.PasswordInfo.Account">
+            <summary>
+            The username context under which the LAPS password request was executed.
+            </summary>
+        </member>
+        <member name="P:SapphTools.Laps.PasswordInfo.PasswordUpdateTime">
+            <summary>
+            The timestamp of the last password update, if known.
+            </summary>
+        </member>
+        <member name="P:SapphTools.Laps.PasswordInfo.ExpirationTimestamp">
+            <summary>
+            The expiration timestamp for the current password, if defined by policy.
+            </summary>
+        </member>
+        <member name="P:SapphTools.Laps.PasswordInfo.Source">
+            <summary>
+            The source or type of password that was retrieved (e.g., cleartext, encrypted, history).
+            </summary>
+        </member>
+        <member name="P:SapphTools.Laps.PasswordInfo.DecryptionStatus">
+            <summary>
+            The outcome of the password decryption process, if applicable.
+            </summary>
+        </member>
+        <member name="P:SapphTools.Laps.PasswordInfo.AuthorizedDecryptor">
+            <summary>
+            The security group or SID that was authorized (or would have been authorized) to decrypt the password.
+            </summary>
+        </member>
+        <member name="T:SapphTools.Laps.PasswordInfoClearText">
+            <summary>
+            Represents a LAPS password retrieved in cleartext form.
+            </summary>
+        </member>
+        <member name="P:SapphTools.Laps.PasswordInfoClearText.Password">
+            <summary>
+            The cleartext password for the managed local account.
+            </summary>
+        </member>
+        <member name="M:SapphTools.Laps.PasswordInfoClearText.#ctor(System.String,System.String,System.String,System.String,System.Nullable{System.DateTime},System.Nullable{System.DateTime},SapphTools.Laps.PasswordSource,SapphTools.Laps.DecryptionStatus,System.String)">
+            <summary>
+            Initializes a new instance of the <see cref="T:SapphTools.Laps.PasswordInfoClearText"/> class.
+            Intended for internal use only.
+            </summary>
+        </member>
+        <member name="T:SapphTools.Laps.PasswordInfoSecureString">
+            <summary>
+            Represents a LAPS password that was retrieved in encrypted form and successfully decrypted into a <see cref="T:System.Security.SecureString"/>.
+            </summary>
+        </member>
+        <member name="P:SapphTools.Laps.PasswordInfoSecureString.Password">
+            <summary>
+            The decrypted LAPS password as a <see cref="T:System.Security.SecureString"/>.
+            </summary>
+        </member>
+        <member name="M:SapphTools.Laps.PasswordInfoSecureString.#ctor(System.String,System.String,System.String,System.Security.SecureString,System.Nullable{System.DateTime},System.Nullable{System.DateTime},SapphTools.Laps.PasswordSource,SapphTools.Laps.DecryptionStatus,System.String)">
+            <summary>
+            Initializes a new instance of the <see cref="T:SapphTools.Laps.PasswordInfoSecureString"/> class.
+            Intended for internal use only.
+            </summary>
+        </member>
+        <member name="T:SapphTools.Laps.PasswordSource">
+            <summary>
+            Identifies the source or type of the LAPS password that was retrieved.
+            </summary>
+        </member>
+        <member name="F:SapphTools.Laps.PasswordSource.PasswordMissing">
+            <summary>
+            No password was found in the LAPS attributes for the account.
+            </summary>
+        </member>
+        <member name="F:SapphTools.Laps.PasswordSource.LegacyLapsCleartextPassword">
+            <summary>
+            The password was retrieved from the legacy ms-Mcs-AdmPwd attribute (cleartext).
+            </summary>
+        </member>
+        <member name="F:SapphTools.Laps.PasswordSource.CleartextPassword">
+            <summary>
+            The password was retrieved from the new cleartext LAPS v2 attribute (msLAPS-Password).
+            </summary>
+        </member>
+        <member name="F:SapphTools.Laps.PasswordSource.EncryptedPassword">
+            <summary>
+            The password was retrieved from the encrypted LAPS v2 attribute (msLAPS-EncryptedPassword).
+            </summary>
+        </member>
+        <member name="F:SapphTools.Laps.PasswordSource.EncryptedPasswordHistory">
+            <summary>
+            The password was retrieved from the encrypted password history attribute (msLAPS-EncryptedPasswordHistory).
+            </summary>
+        </member>
+        <member name="F:SapphTools.Laps.PasswordSource.EncryptedDSRMPassword">
+            <summary>
+            The password was retrieved from the encrypted DSRM password attribute (msLAPS-EncryptedDSRMPassword).
+            </summary>
+        </member>
+        <member name="F:SapphTools.Laps.PasswordSource.EncryptedDSRMPasswordHistory">
+            <summary>
+            The password was retrieved from the encrypted DSRM password history attribute (msLAPS-EncryptedDSRMPasswordHistory).
+            </summary>
+        </member>
+    </members>
+</doc>
