@@ -80,7 +80,38 @@ internal class LapsInternal : IDisposable {
         AccountPasswordAttributes passwordAttributes =
             GetPasswordAttributes(_ldapConn, computerNameInfo.DistinguishedName) ??
             throw new LapsException($"Failed to query password attributes for the '{Identity}' object in AD");
-
+        int totalPasswordObjects = passwordAttributes.EncryptedDSRMPassword.Length + 
+            passwordAttributes.EncryptedDSRMPasswordHistory.Length + 
+            passwordAttributes.EncryptedPassword.Length + 
+            passwordAttributes.EncryptedPasswordHistory.Length;
+        if (totalPasswordObjects == 0) {
+            PasswordInfo dummy;
+            if (AsPlainText) {
+                dummy = new PasswordInfoClearText(
+                    computerNameInfo.Name,
+                    computerNameInfo.DistinguishedName,
+                    _identity.Name,
+                    string.Empty,
+                    null,
+                    null,
+                    PasswordSource.PasswordMissing,
+                    DecryptionStatus.Unauthorized,
+                    string.Empty);
+            } else {
+                dummy = new PasswordInfoSecureString(
+                    computerNameInfo.Name,
+                    computerNameInfo.DistinguishedName,
+                    _identity.Name,
+                    new System.Security.SecureString(),
+                    null,
+                    null,
+                    PasswordSource.PasswordMissing,
+                    DecryptionStatus.Unauthorized,
+                    string.Empty);
+            }
+            outputData.Add(dummy);
+            return outputData;
+        }
         DateTime? passwordExpUtc = passwordAttributes.PasswordExpiration?.ToUniversalTime();
 
         if (passwordAttributes.EncryptedPassword != null) {
