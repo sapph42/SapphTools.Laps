@@ -1,6 +1,6 @@
 # SapphTools.Laps
 
-A drop-in library capable of retrieving LAPS data from a domain controller. PowerShell module not required.
+A drop-in library capable of retrieving LAPS data from a domain controller. PowerShell module not required, as this is a refactor of Microsoft's code IN the PowerShell module - cleaned up, modernized up to C# 10, and made sane.
 
 ## Laps
 
