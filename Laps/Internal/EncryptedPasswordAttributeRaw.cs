@@ -6,6 +6,7 @@ using System.Text;
 #nullable enable
 #pragma warning disable CS0649
 namespace SapphTools.Laps.Internal;
+[DataContract]
 internal class EncryptedPasswordAttributeRaw {
     [DataMember(Name = "n")]
     public string? AccountName { get; internal set; } = null;
