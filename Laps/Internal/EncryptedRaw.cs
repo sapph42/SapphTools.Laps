@@ -6,7 +6,8 @@ using System.Text;
 #nullable enable
 #pragma warning disable CS0649
 namespace SapphTools.Laps.Internal;
-internal class EncryptedPasswordAttributeRaw {
+[DataContract]
+internal class EncryptedRaw {
     [DataMember(Name = "n")]
     public string? AccountName { get; internal set; } = null;
 
@@ -15,10 +16,10 @@ internal class EncryptedPasswordAttributeRaw {
 
     [DataMember(Name = "p")]
     public string? Password { get; internal set; } = null;
-    public static EncryptedPasswordAttributeRaw? Parse(string json) {
-        DataContractJsonSerializer dataContractJsonSerializer = new(typeof(EncryptedPasswordAttributeRaw));
+    public static EncryptedRaw? Parse(string json) {
+        DataContractJsonSerializer dataContractJsonSerializer = new(typeof(EncryptedRaw));
         using MemoryStream stream = new(Encoding.UTF8.GetBytes(json));
-        return dataContractJsonSerializer.ReadObject(stream) as EncryptedPasswordAttributeRaw;
+        return dataContractJsonSerializer.ReadObject(stream) as EncryptedRaw;
     }
 }
 #pragma warning restore CS0649

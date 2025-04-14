@@ -1,9 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.DirectoryServices.Protocols;
+using System.Security.Principal;
 using static SapphTools.Laps.Internal.LapsNative;
 using static SapphTools.Laps.Internal.LapsStatic;
-using static SapphTools.Laps.Internal.OSNative;
 
 #nullable enable
 namespace SapphTools.Laps.Internal;
@@ -11,7 +11,7 @@ internal class LapsInternal : IDisposable {
     private LocalMachineInfo? _localMachineInfo;
     private readonly LdapConnectionInfo _ldapConnectionInfo;
     private readonly LdapConnection _ldapConn;
-    private IntPtr _hDecryptionToken;
+    private readonly WindowsIdentity _identity = WindowsIdentity.GetCurrent();
     private bool _disposed;
 
     public string Domain;
@@ -31,7 +31,6 @@ internal class LapsInternal : IDisposable {
         _ldapConn = BindToDomainController(Domain, DomainController, Port);
         _ldapConnectionInfo = GetLdapConnectionInfo(_ldapConn);
     }
-
     private void AddEncryptedPasswordSet(
         List<PasswordInfo> outputData,
         ComputerNameInfo computer,
@@ -74,7 +73,6 @@ internal class LapsInternal : IDisposable {
             outputData.Add(entry);
         }
     }
-
     public IEnumerable<PasswordInfo> ProcessIdentity(string Identity) {
         List<PasswordInfo> outputData = new();
         ComputerNameInfo computerNameInfo = GetComputerNameInfo(_ldapConn, _ldapConnectionInfo, Identity);
@@ -82,7 +80,38 @@ internal class LapsInternal : IDisposable {
         AccountPasswordAttributes passwordAttributes =
             GetPasswordAttributes(_ldapConn, computerNameInfo.DistinguishedName) ??
             throw new LapsException($"Failed to query password attributes for the '{Identity}' object in AD");
-
+        int totalPasswordObjects = passwordAttributes.EncryptedDSRMPassword.Length + 
+            passwordAttributes.EncryptedDSRMPasswordHistory.Length + 
+            passwordAttributes.EncryptedPassword.Length + 
+            passwordAttributes.EncryptedPasswordHistory.Length;
+        if (totalPasswordObjects == 0) {
+            PasswordInfo dummy;
+            if (AsPlainText) {
+                dummy = new PasswordInfoClearText(
+                    computerNameInfo.Name,
+                    computerNameInfo.DistinguishedName,
+                    _identity.Name,
+                    string.Empty,
+                    null,
+                    null,
+                    PasswordSource.PasswordMissing,
+                    DecryptionStatus.Unauthorized,
+                    string.Empty);
+            } else {
+                dummy = new PasswordInfoSecureString(
+                    computerNameInfo.Name,
+                    computerNameInfo.DistinguishedName,
+                    _identity.Name,
+                    new System.Security.SecureString(),
+                    null,
+                    null,
+                    PasswordSource.PasswordMissing,
+                    DecryptionStatus.Unauthorized,
+                    string.Empty);
+            }
+            outputData.Add(dummy);
+            return outputData;
+        }
         DateTime? passwordExpUtc = passwordAttributes.PasswordExpiration?.ToUniversalTime();
 
         if (passwordAttributes.EncryptedPassword != null) {
@@ -106,7 +135,7 @@ internal class LapsInternal : IDisposable {
                 passwordExpUtc
             );
         } else if (!string.IsNullOrEmpty(passwordAttributes.Password)) {
-            EncryptedPasswordAttributeInner inner = EncryptedPasswordAttributeInner.ParseFromJson(passwordAttributes.Password);
+            EncryptedInner inner = EncryptedInner.ParseFromJson(passwordAttributes.Password);
             outputData.Add(BuildPasswordInfo(
                 computerNameInfo,
                 inner.AccountName,
@@ -136,16 +165,16 @@ internal class LapsInternal : IDisposable {
         if (_localMachineInfo is null) {
             string dnsHostName = QueryLocalComputerName(COMPUTER_NAME_FORMAT.ComputerNameDnsFullyQualified);
             string netbiosName = QueryLocalComputerName(COMPUTER_NAME_FORMAT.ComputerNameNetBIOS);
-            LsaDnsDomainInfo lsaDnsDomainInfo = LsaPolicy.QueryDnsDomainInfo();
-            LsaDomainInfo lsaPrimaryDomainInfo = LsaPolicy.QueryPrimaryDomainInfo();
-            LsaDomainInfo lsaAccountDomainInfo = LsaPolicy.QueryAccountDomainInfo();
+            LsaDnsDomainInfo lsaDnsDomainInfo = LsaPolicy.QueryDns();
+            LsaDomainInfo lsaPrimaryDomainInfo = LsaPolicy.QueryDomain();
+            LsaDomainInfo lsaAccountDomainInfo = LsaPolicy.QueryAccount();
             bool flag = !string.IsNullOrEmpty(lsaPrimaryDomainInfo.Sid) && !string.IsNullOrEmpty(lsaAccountDomainInfo.Sid) && StringComparer.OrdinalIgnoreCase.Equals(lsaPrimaryDomainInfo.Sid, lsaAccountDomainInfo.Sid);
             bool runningOnRODC = false;
             _localMachineInfo = new LocalMachineInfo(dnsHostName, netbiosName, flag, runningOnRODC, lsaDnsDomainInfo, lsaPrimaryDomainInfo, lsaAccountDomainInfo);
         }
     }
     private PasswordInfo BuildPasswordInfoFromEncryptedPassword(ComputerNameInfo computerNameInfo, PasswordSource passwordSource, byte[] encryptedPassword, DateTime? passwordExpirationTimestampUTC) {
-        EncryptedPasswordAttributeState encryptedPasswordAttributeState = ParseAndDecryptDirectoryPassword(_hDecryptionToken, encryptedPassword, out DecryptionStatus decryptionStatus);
+        EncryptedState encryptedPasswordAttributeState = ParseAndDecryptDirectoryPassword(_identity, encryptedPassword, out DecryptionStatus decryptionStatus);
         string? account;
         string? password;
         DateTime? passwordUpdateTimeUTC;
@@ -189,20 +218,14 @@ internal class LapsInternal : IDisposable {
         Dispose(disposing: true);
         GC.SuppressFinalize(this);
     }
-
     private void Dispose(bool disposing) {
         if (!_disposed) {
-            if (_hDecryptionToken != IntPtr.Zero) {
-                CloseHandle(_hDecryptionToken);
-                _hDecryptionToken = IntPtr.Zero;
-            }
             if (disposing && _ldapConn != null) {
                 _ldapConn.Dispose();
             }
             _disposed = true;
         }
     }
-
     ~LapsInternal() {
         Dispose(disposing: false);
     }

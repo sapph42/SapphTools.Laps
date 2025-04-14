@@ -8,13 +8,13 @@ internal readonly struct ForestInfo {
     public readonly int ForestFunctionalLevel;
 
     public ForestInfo(
-        string rootDomainDnsHostName,
+        string forestDnsName,
         string rootDomainNamingContext,
         string configurationNamingContext,
         string schemaNamingContext,
         string schemaNamingMaster,
         int forestFunctionalLevel) {
-        ForestDnsName = rootDomainDnsHostName;
+        ForestDnsName = forestDnsName;
         RootDomainNamingContext = rootDomainNamingContext;
         ConfigurationNamingContext = configurationNamingContext;
         SchemaNamingContext = schemaNamingContext;

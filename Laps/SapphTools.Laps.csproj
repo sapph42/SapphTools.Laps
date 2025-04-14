@@ -67,10 +67,10 @@
     <Compile Include="Internal\DCLocator.cs" />
     <Compile Include="Internal\DescendingDateTimeComparer.cs" />
     <Compile Include="Internal\DomainInfo.cs" />
-    <Compile Include="Internal\EncryptedPasswordAttributeInner.cs" />
-    <Compile Include="Internal\EncryptedPasswordAttributePrefixInfo.cs" />
-    <Compile Include="Internal\EncryptedPasswordAttributeRaw.cs" />
-    <Compile Include="Internal\EncryptedPasswordAttributeState.cs" />
+    <Compile Include="Internal\EncryptedInner.cs" />
+    <Compile Include="Internal\EncryptedPrefix.cs" />
+    <Compile Include="Internal\EncryptedRaw.cs" />
+    <Compile Include="Internal\EncryptedState.cs" />
     <Compile Include="Internal\ForestInfo.cs" />
     <Compile Include="Internal\LapsInternal.cs" />
     <Compile Include="Internal\LapsNative.cs" />

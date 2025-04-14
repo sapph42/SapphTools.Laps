@@ -19,7 +19,7 @@ internal readonly struct LsaDnsDomainInfo {
         Sid = sid;
     }
 
-    public LsaDnsDomainInfo(POLICY_DNS_DOMAIN_INFO domainInfo)
+    public LsaDnsDomainInfo(DnsDomainPolicy domainInfo)
         : this(
             domainInfo.Name.ToString(),
             domainInfo.DnsDomainName.ToString(),
