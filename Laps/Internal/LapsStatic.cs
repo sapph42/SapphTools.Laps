@@ -15,6 +15,9 @@ using static SapphTools.Laps.Internal.OSNative;
 #nullable enable
 namespace SapphTools.Laps.Internal;
 internal static partial class LapsStatic {
+    private const uint SEC_E_DECRYPT_SUCCESS = 0x0;
+    private const uint SEC_E_LOGON_DENIED = 0x8009030C;
+    private const uint MANAGED_EXCEPTION_THROWN = 0x80000002;
     public static void AllocateManagedBuffer(IntPtr pbBuffer, uint cbBuffer, out byte[] bytes) {
         byte[] array = new byte[cbBuffer];
         Marshal.Copy(pbBuffer, array, 0, Convert.ToInt32(cbBuffer));
@@ -35,18 +38,16 @@ internal static partial class LapsStatic {
         cbBuffer = num;
     }
     public static LdapConnection BindToDomainController(string Domain, string? DomainController, int? port) {
-        NetworkCredential credential2;
-        WindowsIdentity identity = WindowsIdentity.GetCurrent();
-        WindowsPrincipal principal = new(identity);
-        credential2 = principal.IsInRole(WindowsBuiltInRole.Administrator)
-            ? CredentialCache.DefaultNetworkCredentials
-            : throw new LapsException("Must run elevated!");
-        LdapConnection result = !string.IsNullOrEmpty(DomainController) && port.HasValue
-            ? GetLdapServerConnection(DomainController!, port, credential2)
+        if (!new WindowsPrincipal(WindowsIdentity.GetCurrent()).IsInRole(WindowsBuiltInRole.Administrator))
+            throw new LapsException("Must run elevated!");
+
+        var credentials = CredentialCache.DefaultNetworkCredentials;
+
+        return !string.IsNullOrEmpty(DomainController) && port.HasValue
+            ? GetLdapServerConnection(DomainController!, port, credentials)
             : !string.IsNullOrEmpty(Domain)
-                ? GetLdapConnection(Domain, writable: true, credential2)
-                : GetLdapConnection(null, writable: true, credential2);
-        return result;
+                ? GetLdapConnection(Domain, writable: true, credentials)
+                : GetLdapConnection(null, writable: true, credentials);
     }
     public static SecureString ConvertStringToSecureString(string someString) {
         SecureString secureString = new();
@@ -60,18 +61,18 @@ internal static partial class LapsStatic {
         IntPtr pbBuffer = IntPtr.Zero;
         IntPtr pbDecryptedData = IntPtr.Zero;
         decryptedBytes = Array.Empty<byte>();
-        uint num;
         try {
             AllocateNativeBuffer(encryptedData, out pbBuffer, out uint cbBuffer);
-            num = DecryptNormalMode(hDecryptionToken, pbBuffer, cbBuffer, 0u, out pbDecryptedData, out uint cbDecryptedData);
-            if (num != 0) {
-                return num;
+            uint result = DecryptNormalMode(hDecryptionToken, pbBuffer, cbBuffer, 0u, out pbDecryptedData, out uint cbDecryptedData);
+            if (result != 0) {
+                return result;
             }
             AllocateManagedBuffer(pbDecryptedData, cbDecryptedData, out byte[]? bytes);
             decryptedBytes = bytes;
+            return result;
         } catch (Exception) {
-            num = 2147483650u;
             decryptedBytes = Array.Empty<byte>();
+            return MANAGED_EXCEPTION_THROWN;
         } finally {
             if (pbDecryptedData != IntPtr.Zero) {
                 LocalFree(pbDecryptedData);
@@ -80,7 +81,6 @@ internal static partial class LapsStatic {
                 LocalFree(pbBuffer);
             }
         }
-        return num;
     }
     public static string EscapeDNForFilter(string dn) {
         Regex escapedBackslash = new("\\\\5c");
@@ -115,6 +115,9 @@ internal static partial class LapsStatic {
             }
         }
         return ResolveSidProtectionString(pszSidProtectionString);
+    }
+    private static byte[] GetByteArrayAt(SearchResultEntry entry, string attr, int index) {
+        return entry.Attributes[attr].GetValues(typeof(byte[]))[index] as byte[] ?? Array.Empty<byte>();
     }
     public static ComputerNameInfo GetComputerNameInfo(LdapConnection ldapConn, LdapConnectionInfo ldapConnectionInfo, string Identity) {
         string? name = null;
@@ -256,55 +259,55 @@ internal static partial class LapsStatic {
         byte[][] encryptedDSRMPasswordHistory = Array.Empty<byte[]>();
         string? legacyPassword = null;
         DateTime? legacyPasswordExpiration = null;
-        string text = EscapeDNForFilter(computerDN);
-        string text2 = string.Format(CultureInfo.InvariantCulture, "(&(objectClass={0})({1}={2}))", "computer", "distinguishedName", text);
-        SearchRequest request = new(text, text2, SearchScope.Base, attributeList);
+        string escapedDN = EscapeDNForFilter(computerDN);
+        string dnFilter = string.Format(CultureInfo.InvariantCulture, "(&(objectClass={0})({1}={2}))", "computer", "distinguishedName", escapedDN);
+        SearchRequest request = new(escapedDN, dnFilter, SearchScope.Base, attributeList);
         if (ldapConn.SendRequest(request) is not SearchResponse searchResponse || searchResponse.Entries.Count != 1) {
             return null;
         }
         SearchResultEntry searchResultEntry = searchResponse.Entries[0];
-        foreach (string attributeName2 in searchResultEntry.Attributes.AttributeNames) {
-            if (StringComparer.InvariantCultureIgnoreCase.Equals(attributeName2, "msLAPS-PasswordExpirationTime")) {
-                string? text5 = searchResultEntry.Attributes["msLAPS-PasswordExpirationTime"].GetValues(typeof(string))[0] as string;
+        foreach (string attributeName in searchResultEntry.Attributes.AttributeNames) {
+            if (StringComparer.InvariantCultureIgnoreCase.Equals(attributeName, "msLAPS-PasswordExpirationTime")) {
+                string? text5 = GetSingleString(searchResultEntry, "msLAPS-PasswordExpirationTime");
                 if (!string.IsNullOrEmpty(text5)) {
                     long fileTime = long.Parse(text5, NumberFormatInfo.InvariantInfo);
                     passwordExpiration = DateTime.FromFileTime(fileTime);
                 }
                 continue;
             }
-            if (StringComparer.InvariantCultureIgnoreCase.Equals(attributeName2, "msLAPS-Password")) {
-                password = searchResultEntry.Attributes["msLAPS-Password"].GetValues(typeof(string))[0] as string;
+            if (StringComparer.InvariantCultureIgnoreCase.Equals(attributeName, "msLAPS-Password")) {
+                password = GetSingleString(searchResultEntry, "msLAPS-Password");
                 continue;
             }
-            if (StringComparer.InvariantCultureIgnoreCase.Equals(attributeName2, "msLAPS-EncryptedPassword")) {
-                encryptedPassword = searchResultEntry.Attributes["msLAPS-EncryptedPassword"].GetValues(typeof(byte[]))[0] as byte[] ?? Array.Empty<byte>();
+            if (StringComparer.InvariantCultureIgnoreCase.Equals(attributeName, "msLAPS-EncryptedPassword")) {
+                encryptedPassword = GetSingleByteArray(searchResultEntry, "msLAPS-EncryptedPassword");
                 continue;
             }
-            if (StringComparer.InvariantCultureIgnoreCase.Equals(attributeName2, "msLAPS-EncryptedPasswordHistory")) {
-                int count = searchResultEntry.Attributes["msLAPS-EncryptedPasswordHistory"].Count;
-                encryptedPasswordHistory = new byte[count][];
-                for (int i = 0; i < count; i++) {
-                    encryptedPasswordHistory[i] = searchResultEntry.Attributes["msLAPS-EncryptedPasswordHistory"].GetValues(typeof(byte[]))[i] as byte[] ?? Array.Empty<byte>();
+            if (StringComparer.InvariantCultureIgnoreCase.Equals(attributeName, "msLAPS-EncryptedPasswordHistory")) {
+                int lapsCount = searchResultEntry.Attributes["msLAPS-EncryptedPasswordHistory"].Count;
+                encryptedPasswordHistory = new byte[lapsCount][];
+                for (int i = 0; i < lapsCount; i++) {
+                    encryptedPasswordHistory[i] = GetByteArrayAt(searchResultEntry, "msLAPS-EncryptedPasswordHistory", i);
                 }
             }
-            if (StringComparer.InvariantCultureIgnoreCase.Equals(attributeName2, "msLAPS-EncryptedDSRMPassword")) {
-                encryptedDSRMPassword = searchResultEntry.Attributes["msLAPS-EncryptedDSRMPassword"].GetValues(typeof(byte[]))[0] as byte[] ?? Array.Empty<byte>();
+            if (StringComparer.InvariantCultureIgnoreCase.Equals(attributeName, "msLAPS-EncryptedDSRMPassword")) {
+                encryptedDSRMPassword = GetSingleByteArray(searchResultEntry, "msLAPS-EncryptedDSRMPassword");
                 continue;
             }
-            if (StringComparer.InvariantCultureIgnoreCase.Equals(attributeName2, "msLAPS-EncryptedDSRMPasswordHistory")) {
-                int count2 = searchResultEntry.Attributes["msLAPS-EncryptedDSRMPasswordHistory"].Count;
-                encryptedDSRMPasswordHistory = new byte[count2][];
-                for (int i = 0; i < count2; i++) {
-                    encryptedDSRMPasswordHistory[i] = searchResultEntry.Attributes["msLAPS-EncryptedDSRMPasswordHistory"].GetValues(typeof(byte[]))[i] as byte[] ?? Array.Empty<byte>();
+            if (StringComparer.InvariantCultureIgnoreCase.Equals(attributeName, "msLAPS-EncryptedDSRMPasswordHistory")) {
+                int legacyLapsCount = searchResultEntry.Attributes["msLAPS-EncryptedDSRMPasswordHistory"].Count;
+                encryptedDSRMPasswordHistory = new byte[legacyLapsCount][];
+                for (int i = 0; i < legacyLapsCount; i++) {
+                    encryptedDSRMPasswordHistory[i] = GetByteArrayAt(searchResultEntry, "msLAPS-EncryptedDSRMPasswordHistory", i);
                 }
             }
-            if (StringComparer.InvariantCultureIgnoreCase.Equals(attributeName2, "ms-Mcs-AdmPwdExpirationTime")) {
-                string text5 = searchResultEntry.Attributes["ms-Mcs-AdmPwdExpirationTime"].GetValues(typeof(string))[0] as string ?? string.Empty;
-                if (!string.IsNullOrEmpty(text5)) {
-                    long fileTime2 = long.Parse(text5, NumberFormatInfo.InvariantInfo);
+            if (StringComparer.InvariantCultureIgnoreCase.Equals(attributeName, "ms-Mcs-AdmPwdExpirationTime")) {
+                string legacyExpiration = searchResultEntry.Attributes["ms-Mcs-AdmPwdExpirationTime"].GetValues(typeof(string))[0] as string ?? string.Empty;
+                if (!string.IsNullOrEmpty(legacyExpiration)) {
+                    long fileTime2 = long.Parse(legacyExpiration, NumberFormatInfo.InvariantInfo);
                     legacyPasswordExpiration = DateTime.FromFileTime(fileTime2);
                 }
-            } else if (StringComparer.InvariantCultureIgnoreCase.Equals(attributeName2, "ms-Mcs-AdmPwd")) {
+            } else if (StringComparer.InvariantCultureIgnoreCase.Equals(attributeName, "ms-Mcs-AdmPwd")) {
                 legacyPassword = searchResultEntry.Attributes["ms-Mcs-AdmPwd"].GetValues(typeof(string))[0] as string ?? string.Empty;
             }
         }
@@ -318,6 +321,9 @@ internal static partial class LapsStatic {
             legacyPassword ?? string.Empty,
             legacyPasswordExpiration
         );
+    }
+    private static byte[] GetSingleByteArray(SearchResultEntry entry, string attrName) {
+        return entry.Attributes[attrName]?.GetValues(typeof(byte[]))?[0] as byte[] ?? Array.Empty<byte>();
     }
     private static string GetSingleString(SearchResultEntry entry, string attributeName) {
         return (string)entry.Attributes[attributeName].GetValues(typeof(string))[0];
@@ -347,30 +353,32 @@ internal static partial class LapsStatic {
         return GetSingleString(dnsEntry.Entries[0], "dnsHostName");
     }
     public static EncryptedPasswordAttributeState ParseAndDecryptDirectoryPassword(IntPtr hDecryptionToken, byte[] encryptedPasswordBytes, out DecryptionStatus decryptionStatus) {
+        const int PrefixLength = 16;
         byte[] trailingBytes = Array.Empty<byte>();
         EncryptedPasswordAttributePrefixInfo encryptedPasswordAttributePrefixInfo = EncryptedPasswordAttributePrefixInfo.ParseFromBuffer(encryptedPasswordBytes);
         byte[] encryptedData = new byte[encryptedPasswordAttributePrefixInfo.EncryptedBufferSize];
-        Buffer.BlockCopy(encryptedPasswordBytes, 16, encryptedData, 0, (int)encryptedPasswordAttributePrefixInfo.EncryptedBufferSize);
+        Buffer.BlockCopy(encryptedPasswordBytes, PrefixLength, encryptedData, 0, (int)encryptedPasswordAttributePrefixInfo.EncryptedBufferSize);
         string authorizedDecryptorSid = ExtractAndResolveSidProtectionString(encryptedData);
         EncryptedPasswordAttributeInner? innerState;
         switch (DecryptBytesHelper(hDecryptionToken, encryptedData, out byte[] decryptedBytes)) {
-            case 0u:
+            case SEC_E_DECRYPT_SUCCESS:
                 innerState = EncryptedPasswordAttributeInner.ParseFromJson(Encoding.Unicode.GetString(decryptedBytes));
                 decryptionStatus = DecryptionStatus.Success;
                 break;
-            case 2148073516u:
+            case SEC_E_LOGON_DENIED:
                 innerState = null;
                 decryptionStatus = DecryptionStatus.Unauthorized;
                 break;
+            case MANAGED_EXCEPTION_THROWN:
             default:
                 innerState = null;
                 decryptionStatus = DecryptionStatus.Error;
                 break;
         }
-        uint num = (uint)(encryptedPasswordBytes.Length - 16) - encryptedPasswordAttributePrefixInfo.EncryptedBufferSize;
+        uint num = (uint)(encryptedPasswordBytes.Length - PrefixLength) - encryptedPasswordAttributePrefixInfo.EncryptedBufferSize;
         if (num != 0) {
             trailingBytes = new byte[num];
-            Buffer.BlockCopy(encryptedPasswordBytes, (int)(16 + encryptedPasswordAttributePrefixInfo.EncryptedBufferSize), trailingBytes, 0, (int)num);
+            Buffer.BlockCopy(encryptedPasswordBytes, (int)(PrefixLength + encryptedPasswordAttributePrefixInfo.EncryptedBufferSize), trailingBytes, 0, (int)num);
         }
         return new EncryptedPasswordAttributeState(authorizedDecryptorSid, encryptedPasswordAttributePrefixInfo, innerState, trailingBytes);
     }

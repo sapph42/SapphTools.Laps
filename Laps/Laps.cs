@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using SapphTools.Laps.Internal;
 
 #nullable enable
@@ -7,8 +8,9 @@ namespace SapphTools.Laps;
 /// Provides a public interface for querying LAPS-managed local administrator passwords from Active Directory,
 /// including support for historical credentials, snapshots, and cleartext or secure string output formats.
 /// </summary>
-public class Laps {
+public sealed class Laps : IDisposable {
     private readonly LapsInternal laps = new();
+    private bool _disposed;
 
     /// <summary>
     /// Specifies the name of the Active Directory domain to connect to.
@@ -76,5 +78,21 @@ public class Laps {
     /// </returns>
     public IEnumerable<PasswordInfo> GetPasswordInfo(string identity) {
         return laps.ProcessIdentity(identity);
+    }
+    public void Dispose() {
+        Dispose(disposing: true);
+        GC.SuppressFinalize(this);
+    }
+    private void Dispose(bool disposing) {
+        if (_disposed)
+            return;
+        if (disposing) {
+            laps.Dispose();
+        }
+        _disposed = true;
+    }
+
+    ~Laps() {
+        Dispose(disposing: false);
     }
 }
