@@ -57,13 +57,13 @@ internal static partial class LapsStatic {
         secureString.MakeReadOnly();
         return secureString;
     }
-    public static uint DecryptBytesHelper(IntPtr hDecryptionToken, byte[] encryptedData, out byte[] decryptedBytes) {
+    public static uint DecryptBytesHelper(WindowsIdentity ident, byte[] encryptedData, out byte[] decryptedBytes) {
         IntPtr pbBuffer = IntPtr.Zero;
         IntPtr pbDecryptedData = IntPtr.Zero;
         decryptedBytes = Array.Empty<byte>();
         try {
             AllocateNativeBuffer(encryptedData, out pbBuffer, out uint cbBuffer);
-            uint result = DecryptNormalMode(hDecryptionToken, pbBuffer, cbBuffer, 0u, out pbDecryptedData, out uint cbDecryptedData);
+            uint result = DecryptNormalMode(ident.Token, pbBuffer, cbBuffer, 0u, out pbDecryptedData, out uint cbDecryptedData);
             if (result != 0) {
                 return result;
             }
@@ -352,7 +352,7 @@ internal static partial class LapsStatic {
         var dnsEntry = (SearchResponse)conn.SendRequest(dnsRequest);
         return GetSingleString(dnsEntry.Entries[0], "dnsHostName");
     }
-    public static EncryptedPasswordAttributeState ParseAndDecryptDirectoryPassword(IntPtr hDecryptionToken, byte[] encryptedPasswordBytes, out DecryptionStatus decryptionStatus) {
+    public static EncryptedPasswordAttributeState ParseAndDecryptDirectoryPassword(WindowsIdentity ident, byte[] encryptedPasswordBytes, out DecryptionStatus decryptionStatus) {
         const int PrefixLength = 16;
         byte[] trailingBytes = Array.Empty<byte>();
         EncryptedPasswordAttributePrefixInfo encryptedPasswordAttributePrefixInfo = EncryptedPasswordAttributePrefixInfo.ParseFromBuffer(encryptedPasswordBytes);
@@ -360,7 +360,7 @@ internal static partial class LapsStatic {
         Buffer.BlockCopy(encryptedPasswordBytes, PrefixLength, encryptedData, 0, (int)encryptedPasswordAttributePrefixInfo.EncryptedBufferSize);
         string authorizedDecryptorSid = ExtractAndResolveSidProtectionString(encryptedData);
         EncryptedPasswordAttributeInner? innerState;
-        switch (DecryptBytesHelper(hDecryptionToken, encryptedData, out byte[] decryptedBytes)) {
+        switch (DecryptBytesHelper(ident, encryptedData, out byte[] decryptedBytes)) {
             case SEC_E_DECRYPT_SUCCESS:
                 innerState = EncryptedPasswordAttributeInner.ParseFromJson(Encoding.Unicode.GetString(decryptedBytes));
                 decryptionStatus = DecryptionStatus.Success;

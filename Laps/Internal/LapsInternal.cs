@@ -1,9 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.DirectoryServices.Protocols;
+using System.Security.Principal;
 using static SapphTools.Laps.Internal.LapsNative;
 using static SapphTools.Laps.Internal.LapsStatic;
-using static SapphTools.Laps.Internal.OSNative;
 
 #nullable enable
 namespace SapphTools.Laps.Internal;
@@ -11,7 +11,7 @@ internal class LapsInternal : IDisposable {
     private LocalMachineInfo? _localMachineInfo;
     private readonly LdapConnectionInfo _ldapConnectionInfo;
     private readonly LdapConnection _ldapConn;
-    private IntPtr _hDecryptionToken;
+    private WindowsIdentity _identity = WindowsIdentity.GetCurrent();
     private bool _disposed;
 
     public string Domain;
@@ -31,7 +31,6 @@ internal class LapsInternal : IDisposable {
         _ldapConn = BindToDomainController(Domain, DomainController, Port);
         _ldapConnectionInfo = GetLdapConnectionInfo(_ldapConn);
     }
-
     private void AddEncryptedPasswordSet(
         List<PasswordInfo> outputData,
         ComputerNameInfo computer,
@@ -74,7 +73,6 @@ internal class LapsInternal : IDisposable {
             outputData.Add(entry);
         }
     }
-
     public IEnumerable<PasswordInfo> ProcessIdentity(string Identity) {
         List<PasswordInfo> outputData = new();
         ComputerNameInfo computerNameInfo = GetComputerNameInfo(_ldapConn, _ldapConnectionInfo, Identity);
@@ -145,7 +143,7 @@ internal class LapsInternal : IDisposable {
         }
     }
     private PasswordInfo BuildPasswordInfoFromEncryptedPassword(ComputerNameInfo computerNameInfo, PasswordSource passwordSource, byte[] encryptedPassword, DateTime? passwordExpirationTimestampUTC) {
-        EncryptedPasswordAttributeState encryptedPasswordAttributeState = ParseAndDecryptDirectoryPassword(_hDecryptionToken, encryptedPassword, out DecryptionStatus decryptionStatus);
+        EncryptedPasswordAttributeState encryptedPasswordAttributeState = ParseAndDecryptDirectoryPassword(_identity, encryptedPassword, out DecryptionStatus decryptionStatus);
         string? account;
         string? password;
         DateTime? passwordUpdateTimeUTC;
@@ -189,20 +187,14 @@ internal class LapsInternal : IDisposable {
         Dispose(disposing: true);
         GC.SuppressFinalize(this);
     }
-
     private void Dispose(bool disposing) {
         if (!_disposed) {
-            if (_hDecryptionToken != IntPtr.Zero) {
-                CloseHandle(_hDecryptionToken);
-                _hDecryptionToken = IntPtr.Zero;
-            }
             if (disposing && _ldapConn != null) {
                 _ldapConn.Dispose();
             }
             _disposed = true;
         }
     }
-
     ~LapsInternal() {
         Dispose(disposing: false);
     }
