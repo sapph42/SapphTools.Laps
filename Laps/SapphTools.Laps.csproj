@@ -16,7 +16,7 @@
     <AppDesignerFolder>Properties</AppDesignerFolder>
     <RootNamespace>SapphTools.Laps</RootNamespace>
     <AssemblyName>SapphTools.Laps</AssemblyName>
-    <TargetFrameworkVersion>v4.8.1</TargetFrameworkVersion>
+    <TargetFrameworkVersion>v4.7.2</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
     <Deterministic>true</Deterministic>
     <Nullable>enable</Nullable>
@@ -81,7 +81,7 @@
     <Compile Include="Internal\LsaDomainInfo.cs" />
     <Compile Include="Internal\LsaPolicy.cs" />
     <Compile Include="Internal\OSNative.cs" />
-    <Compile Include="Laps.cs" />
+    <Compile Include="LapsConnection.cs" />
     <Compile Include="LapsException.cs" />
     <Compile Include="PasswordInfo.cs" />
     <Compile Include="PasswordInfoClearText.cs" />

@@ -364,3 +364,4 @@ FodyWeavers.xsd
 
 # Assembly signing keys
 *.snk
+/UnitTests

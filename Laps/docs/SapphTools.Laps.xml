@@ -29,46 +29,46 @@
             An unexpected error occurred during decryption.
             </summary>
         </member>
-        <member name="T:SapphTools.Laps.Laps">
+        <member name="T:SapphTools.Laps.LapsConnection">
             <summary>
             Provides a public interface for querying LAPS-managed local administrator passwords from Active Directory,
             including support for historical credentials, snapshots, and cleartext or secure string output formats.
             </summary>
         </member>
-        <member name="P:SapphTools.Laps.Laps.Domain">
+        <member name="P:SapphTools.Laps.LapsConnection.Domain">
             <summary>
             Specifies the name of the Active Directory domain to connect to.
             If not set, the current domain of the executing machine will be used.
             </summary>
         </member>
-        <member name="P:SapphTools.Laps.Laps.DomainController">
+        <member name="P:SapphTools.Laps.LapsConnection.DomainController">
             <summary>
             Specifies the domain controller to query, or the remote server hosting an AD Snapshot Browser instance.
             </summary>
         </member>
-        <member name="P:SapphTools.Laps.Laps.IncludeHistory">
+        <member name="P:SapphTools.Laps.LapsConnection.IncludeHistory">
             <summary>
             Indicates whether to return older (historical) LAPS credentials associated with the computer object, if available.
             </summary>
         </member>
-        <member name="P:SapphTools.Laps.Laps.AsPlainText">
+        <member name="P:SapphTools.Laps.LapsConnection.AsPlainText">
             <summary>
             If set to <c>true</c>, passwords will be returned in cleartext.
             If <c>false</c> (default), passwords will be returned as <see cref="T:System.Security.SecureString"/> objects.
             </summary>
         </member>
-        <member name="P:SapphTools.Laps.Laps.Port">
+        <member name="P:SapphTools.Laps.LapsConnection.Port">
             <summary>
             Specifies the port used when connecting to an Active Directory Snapshot Browser server.
             </summary>
         </member>
-        <member name="M:SapphTools.Laps.Laps.#ctor">
+        <member name="M:SapphTools.Laps.LapsConnection.#ctor">
             <summary>
-            Initializes a new instance of the <see cref="T:SapphTools.Laps.Laps"/> class.
-            The <see cref="P:SapphTools.Laps.Laps.Domain"/> property will default to the currently joined domain.
+            Initializes a new instance of the <see cref="T:SapphTools.Laps.LapsConnection"/> class.
+            The <see cref="P:SapphTools.Laps.LapsConnection.Domain"/> property will default to the currently joined domain.
             </summary>
         </member>
-        <member name="M:SapphTools.Laps.Laps.GetPasswordInfo(System.String)">
+        <member name="M:SapphTools.Laps.LapsConnection.GetPasswordInfo(System.String)">
             <summary>
             Queries Windows LAPS (Local Administrator Password Solution) credentials from Active Directory for a specified computer identity.
             </summary>
@@ -85,6 +85,16 @@
             <returns>
             A collection of <see cref="T:SapphTools.Laps.PasswordInfo"/> objects representing the retrieved LAPS credentials.
             </returns>
+        </member>
+        <member name="M:SapphTools.Laps.LapsConnection.Dispose">
+            <summary>
+            Disposer.
+            </summary>
+        </member>
+        <member name="M:SapphTools.Laps.LapsConnection.Finalize">
+            <summary>
+            Destructor.
+            </summary>
         </member>
         <member name="T:SapphTools.Laps.LapsException">
             <summary>
