@@ -8,7 +8,7 @@ namespace SapphTools.Laps;
 /// Provides a public interface for querying LAPS-managed local administrator passwords from Active Directory,
 /// including support for historical credentials, snapshots, and cleartext or secure string output formats.
 /// </summary>
-public sealed class Laps : IDisposable {
+public sealed class LapsConnection : IDisposable {
     private readonly LapsInternal laps = new();
     private bool _disposed;
 
@@ -55,10 +55,10 @@ public sealed class Laps : IDisposable {
     }
 
     /// <summary>
-    /// Initializes a new instance of the <see cref="Laps"/> class.
+    /// Initializes a new instance of the <see cref="LapsConnection"/> class.
     /// The <see cref="Domain"/> property will default to the currently joined domain.
     /// </summary>
-    public Laps() { }
+    public LapsConnection() { }
 
     /// <summary>
     /// Queries Windows LAPS (Local Administrator Password Solution) credentials from Active Directory for a specified computer identity.
@@ -79,6 +79,9 @@ public sealed class Laps : IDisposable {
     public IEnumerable<PasswordInfo> GetPasswordInfo(string identity) {
         return laps.ProcessIdentity(identity);
     }
+    /// <summary>
+    /// Disposer.
+    /// </summary>
     public void Dispose() {
         Dispose(disposing: true);
         GC.SuppressFinalize(this);
@@ -91,8 +94,10 @@ public sealed class Laps : IDisposable {
         }
         _disposed = true;
     }
-
-    ~Laps() {
+    /// <summary>
+    /// Destructor.
+    /// </summary>
+    ~LapsConnection() {
         Dispose(disposing: false);
     }
 }
