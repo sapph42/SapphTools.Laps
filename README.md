@@ -2,7 +2,7 @@
 
 A drop-in library capable of retrieving LAPS data from a domain controller. PowerShell module not required, as this is a refactor of Microsoft's code IN the PowerShell module - cleaned up, modernized up to C# 10, and made sane.
 
-## Laps
+## LapsConnection
 
 Provides a public interface for querying LAPS-managed local administrator passwords from Active Directory,
 including support for historical credentials, snapshots, and output format options.
