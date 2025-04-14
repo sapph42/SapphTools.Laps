@@ -11,7 +11,7 @@ internal class LapsInternal : IDisposable {
     private LocalMachineInfo? _localMachineInfo;
     private readonly LdapConnectionInfo _ldapConnectionInfo;
     private readonly LdapConnection _ldapConn;
-    private WindowsIdentity _identity = WindowsIdentity.GetCurrent();
+    private readonly WindowsIdentity _identity = WindowsIdentity.GetCurrent();
     private bool _disposed;
 
     public string Domain;
@@ -135,7 +135,7 @@ internal class LapsInternal : IDisposable {
                 passwordExpUtc
             );
         } else if (!string.IsNullOrEmpty(passwordAttributes.Password)) {
-            EncryptedPasswordAttributeInner inner = EncryptedPasswordAttributeInner.ParseFromJson(passwordAttributes.Password);
+            EncryptedInner inner = EncryptedInner.ParseFromJson(passwordAttributes.Password);
             outputData.Add(BuildPasswordInfo(
                 computerNameInfo,
                 inner.AccountName,
@@ -165,16 +165,16 @@ internal class LapsInternal : IDisposable {
         if (_localMachineInfo is null) {
             string dnsHostName = QueryLocalComputerName(COMPUTER_NAME_FORMAT.ComputerNameDnsFullyQualified);
             string netbiosName = QueryLocalComputerName(COMPUTER_NAME_FORMAT.ComputerNameNetBIOS);
-            LsaDnsDomainInfo lsaDnsDomainInfo = LsaPolicy.QueryDnsDomainInfo();
-            LsaDomainInfo lsaPrimaryDomainInfo = LsaPolicy.QueryPrimaryDomainInfo();
-            LsaDomainInfo lsaAccountDomainInfo = LsaPolicy.QueryAccountDomainInfo();
+            LsaDnsDomainInfo lsaDnsDomainInfo = LsaPolicy.QueryDns();
+            LsaDomainInfo lsaPrimaryDomainInfo = LsaPolicy.QueryDomain();
+            LsaDomainInfo lsaAccountDomainInfo = LsaPolicy.QueryAccount();
             bool flag = !string.IsNullOrEmpty(lsaPrimaryDomainInfo.Sid) && !string.IsNullOrEmpty(lsaAccountDomainInfo.Sid) && StringComparer.OrdinalIgnoreCase.Equals(lsaPrimaryDomainInfo.Sid, lsaAccountDomainInfo.Sid);
             bool runningOnRODC = false;
             _localMachineInfo = new LocalMachineInfo(dnsHostName, netbiosName, flag, runningOnRODC, lsaDnsDomainInfo, lsaPrimaryDomainInfo, lsaAccountDomainInfo);
         }
     }
     private PasswordInfo BuildPasswordInfoFromEncryptedPassword(ComputerNameInfo computerNameInfo, PasswordSource passwordSource, byte[] encryptedPassword, DateTime? passwordExpirationTimestampUTC) {
-        EncryptedPasswordAttributeState encryptedPasswordAttributeState = ParseAndDecryptDirectoryPassword(_identity, encryptedPassword, out DecryptionStatus decryptionStatus);
+        EncryptedState encryptedPasswordAttributeState = ParseAndDecryptDirectoryPassword(_identity, encryptedPassword, out DecryptionStatus decryptionStatus);
         string? account;
         string? password;
         DateTime? passwordUpdateTimeUTC;

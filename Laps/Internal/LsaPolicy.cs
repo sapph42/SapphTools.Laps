@@ -5,7 +5,12 @@ using static SapphTools.Laps.Internal.OSNative;
 
 namespace SapphTools.Laps.Internal;
 internal static class LsaPolicy {
-    public static LsaDnsDomainInfo QueryDnsDomainInfo() {
+    private enum QueryType : uint {
+        Domain = 3u,
+        Account = 5u,
+        DomainInfo = 12u
+    }
+    public static LsaDnsDomainInfo QueryDns() {
         IntPtr intPtr = IntPtr.Zero;
         IntPtr buffer = IntPtr.Zero;
         try {
@@ -13,11 +18,11 @@ internal static class LsaPolicy {
             if (intPtr == IntPtr.Zero) {
                 throw new Exception("GetLocalLsaPolicyHandle failed");
             }
-            if (LsaQueryInformationPolicy(intPtr, 12u, out buffer) != 0) {
-                throw new Exception("LsaQueryInformationPolicy(PolicyAccountDomainInformation) failed");
+            if (LsaQueryInformationPolicy(intPtr, (uint)QueryType.DomainInfo, out buffer) != 0) {
+                throw new Exception("LsaQueryInformationPolicy(LsaDnsDomainInfo) failed");
             }
-            POLICY_DNS_DOMAIN_INFO? pOLICY_DNS_DOMAIN_INFO = (POLICY_DNS_DOMAIN_INFO?)Marshal.PtrToStructure(buffer, typeof(POLICY_DNS_DOMAIN_INFO));
-            return new LsaDnsDomainInfo(pOLICY_DNS_DOMAIN_INFO!.Value);
+            DnsDomainPolicy? dnsDomainPolicy = (DnsDomainPolicy?)Marshal.PtrToStructure(buffer, typeof(DnsDomainPolicy));
+            return new LsaDnsDomainInfo(dnsDomainPolicy!.Value);
         } finally {
             if (buffer != IntPtr.Zero) {
                 LsaFreeMemory(buffer);
@@ -28,7 +33,13 @@ internal static class LsaPolicy {
         }
     }
 
-    public static LsaDomainInfo QueryAccountDomainInfo() {
+    public static LsaDomainInfo QueryAccount() {
+        return GenericQuery((uint)QueryType.Account);
+    }
+    public static LsaDomainInfo QueryDomain() {
+        return GenericQuery((uint)QueryType.Domain);
+    }
+    private static LsaDomainInfo GenericQuery(uint infoClass) {
         IntPtr intPtr = IntPtr.Zero;
         IntPtr buffer = IntPtr.Zero;
         try {
@@ -36,14 +47,14 @@ internal static class LsaPolicy {
             if (intPtr == IntPtr.Zero) {
                 throw new Exception("GetLocalLsaPolicyHandle failed");
             }
-            if (LsaQueryInformationPolicy(intPtr, 5u, out buffer) != 0 || buffer == IntPtr.Zero) {
+            if (LsaQueryInformationPolicy(intPtr, infoClass, out buffer) != 0 || buffer == IntPtr.Zero) {
                 throw new Exception("LsaQueryInformationPolicy(PolicyAccountDomainInformation) failed");
             }
-            POLICY_DOMAIN_INFO pOLICY_ACCOUNT_DOMAIN_INFO = (POLICY_DOMAIN_INFO)Marshal.PtrToStructure(buffer, typeof(POLICY_DOMAIN_INFO))!;
+            DomainPolicy domainPolicy = (DomainPolicy)Marshal.PtrToStructure(buffer, typeof(DomainPolicy))!;
             return new LsaDomainInfo(
-                pOLICY_ACCOUNT_DOMAIN_INFO.DomainName.ToString(),
-                pOLICY_ACCOUNT_DOMAIN_INFO.DomainSid != IntPtr.Zero
-                    ? new SecurityIdentifier(pOLICY_ACCOUNT_DOMAIN_INFO.DomainSid).ToString()
+                domainPolicy.DomainName.ToString(),
+                domainPolicy.DomainSid != IntPtr.Zero
+                    ? new SecurityIdentifier(domainPolicy.DomainSid).ToString()
                     : null
             );
         } finally {
@@ -55,45 +66,12 @@ internal static class LsaPolicy {
             }
         }
     }
-
-    public static LsaDomainInfo QueryPrimaryDomainInfo() {
-        IntPtr intPtr = IntPtr.Zero;
-        IntPtr buffer = IntPtr.Zero;
-        try {
-            intPtr = GetLocalLsaPolicyHandle();
-            if (intPtr == IntPtr.Zero) {
-                throw new Exception("GetLocalLsaPolicyHandle failed");
-            }
-            if (LsaQueryInformationPolicy(intPtr, 3u, out buffer) != 0 || buffer == IntPtr.Zero) {
-                throw new Exception("LsaQueryInformationPolicy(PolicyPrimaryDomainInformation) failed");
-            }
-            POLICY_DOMAIN_INFO pOLICY_PRIMARY_DOMAIN_INFO = (POLICY_DOMAIN_INFO)Marshal.PtrToStructure(buffer, typeof(POLICY_DOMAIN_INFO))!;
-            return new LsaDomainInfo(pOLICY_PRIMARY_DOMAIN_INFO.DomainName.ToString(),
-                pOLICY_PRIMARY_DOMAIN_INFO.DomainSid != IntPtr.Zero
-                    ? new SecurityIdentifier(pOLICY_PRIMARY_DOMAIN_INFO.DomainSid).ToString()
-                    : null
-            );
-        } finally {
-            if (buffer != IntPtr.Zero) {
-                LsaFreeMemory(buffer);
-            }
-            if (intPtr != IntPtr.Zero) {
-                LsaClose(intPtr);
-            }
-        }
-    }
-
     private static IntPtr GetLocalLsaPolicyHandle() {
         uint desiredAccess = 1u;
-        LSA_UNICODE_STRING SystemName = default;
-        IntPtr PolicyHandle = IntPtr.Zero;
-        LSA_OBJECT_ATTRIBUTES lSA_OBJECT_ATTRIBUTES = default;
-        lSA_OBJECT_ATTRIBUTES.RootDirectory = IntPtr.Zero;
-        lSA_OBJECT_ATTRIBUTES.SecurityDescriptor = IntPtr.Zero;
-        lSA_OBJECT_ATTRIBUTES.SecurityQualityOfService = IntPtr.Zero;
-        LSA_OBJECT_ATTRIBUTES ObjectAttributes = lSA_OBJECT_ATTRIBUTES;
-        return LsaNtStatusToWinError(LsaOpenPolicy(ref SystemName, ref ObjectAttributes, desiredAccess, out PolicyHandle)) != 0
-            ? throw new Exception("LsaOpenPolicy failed")
-            : PolicyHandle;
+        LsaString SystemName = default;
+        LsaAttribs lsaAttribs = default;
+        return LsaNtStatusToWinError(LsaOpenPolicy(ref SystemName, ref lsaAttribs, desiredAccess, out IntPtr PolicyHandle)) == 0
+            ? PolicyHandle
+            : throw new Exception("LsaOpenPolicy failed"); 
     }
 }

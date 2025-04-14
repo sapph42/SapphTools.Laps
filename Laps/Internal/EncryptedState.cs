@@ -1,15 +1,15 @@
 ﻿#nullable enable
 namespace SapphTools.Laps.Internal;
-internal readonly struct EncryptedPasswordAttributeState {
+internal readonly struct EncryptedState {
     public readonly string AuthorizedDecryptorSid;
-    public readonly EncryptedPasswordAttributePrefixInfo PrefixInfo;
-    public readonly EncryptedPasswordAttributeInner? InnerState;
+    public readonly EncryptedPrefix PrefixInfo;
+    public readonly EncryptedInner? InnerState;
     public readonly byte[] TrailingBytes;
 
-    public EncryptedPasswordAttributeState(
+    public EncryptedState(
         string authorizedDecryptorSid,
-        EncryptedPasswordAttributePrefixInfo prefixInfo,
-        EncryptedPasswordAttributeInner? innerState,
+        EncryptedPrefix prefixInfo,
+        EncryptedInner? innerState,
         byte[] trailingBytes) {
         AuthorizedDecryptorSid = authorizedDecryptorSid;
         PrefixInfo = prefixInfo;

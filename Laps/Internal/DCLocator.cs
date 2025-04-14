@@ -25,7 +25,7 @@ internal class DCLocator {
         DcSiteName = dcSiteName;
         ClientSiteName = clientSiteName;
     }
-    public DCLocator(DOMAIN_CONTROLLER_INFO info) : this(
+    public DCLocator(DC_INFO info) : this(
         info.DomainControllerName[2..],
         info.DomainControllerAddress,
         info.DomainControllerAddressType,
@@ -36,9 +36,6 @@ internal class DCLocator {
         info.DcSiteName,
         info.ClientSiteName
     ) { }
-    public static DCLocator LocateDC(string ComputerName, string DomainName, string SiteName, uint Flags) {
-        return LocateDCNoThrow(ComputerName, DomainName, SiteName, Flags) ?? throw new Exception("DClocator failed");
-    }
     public static DCLocator? LocateDCNoThrow(string? ComputerName, string? DomainName, string? SiteName, uint Flags) {
         const uint DS_RETURN_FLAT_NAME = 0x80000000u;
         const uint DS_RETURN_DNS_NAME = 0x40000000;
@@ -49,21 +46,21 @@ internal class DCLocator {
         ComputerName ??= string.Empty;
         DomainName ??= string.Empty;
         SiteName ??= string.Empty;
-        nint pDOMAIN_CONTROLLER_INFO;
+        nint dcInfoPtr;
         try {
-            if (DsGetDcName(ComputerName, DomainName, IntPtr.Zero, SiteName, Flags, out pDOMAIN_CONTROLLER_INFO) != 0) {
+            if (DsGetDcName(ComputerName, DomainName, IntPtr.Zero, SiteName, Flags, out dcInfoPtr) != 0) {
                 return null;
             }
         } catch {
             return null;
         }
         try {
-            DOMAIN_CONTROLLER_INFO? dOMAIN_CONTROLLER_INFO = (DOMAIN_CONTROLLER_INFO?)Marshal.PtrToStructure(pDOMAIN_CONTROLLER_INFO, typeof(DOMAIN_CONTROLLER_INFO));
-            return dOMAIN_CONTROLLER_INFO is null ? null : new DCLocator(dOMAIN_CONTROLLER_INFO.Value);
+            DC_INFO? dcInfo = (DC_INFO?)Marshal.PtrToStructure(dcInfoPtr, typeof(DC_INFO));
+            return dcInfo is null ? null : new DCLocator(dcInfo.Value);
         } catch (Exception) {
             return null;
         } finally {
-            NetApiBufferFree(pDOMAIN_CONTROLLER_INFO);
+            NetApiBufferFree(dcInfoPtr);
         }
     }
 }

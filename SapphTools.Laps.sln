@@ -5,6 +5,8 @@ VisualStudioVersion = 17.13.35919.96
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SapphTools.Laps", "Laps\SapphTools.Laps.csproj", "{816E8642-1D65-4230-A299-17938AD28615}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "UnitTests", "UnitTests\UnitTests.csproj", "{7C3BB7D8-F932-4FCF-803D-DF967F254892}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -15,6 +17,10 @@ Global
 		{816E8642-1D65-4230-A299-17938AD28615}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{816E8642-1D65-4230-A299-17938AD28615}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{816E8642-1D65-4230-A299-17938AD28615}.Release|Any CPU.Build.0 = Release|Any CPU
+		{7C3BB7D8-F932-4FCF-803D-DF967F254892}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{7C3BB7D8-F932-4FCF-803D-DF967F254892}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{7C3BB7D8-F932-4FCF-803D-DF967F254892}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{7C3BB7D8-F932-4FCF-803D-DF967F254892}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

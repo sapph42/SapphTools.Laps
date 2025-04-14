@@ -3,37 +3,37 @@ using System.Globalization;
 
 #nullable enable
 namespace SapphTools.Laps.Internal;
-internal readonly struct EncryptedPasswordAttributeInner {
+internal readonly struct EncryptedInner {
     public string AccountName { get; }
     public string Password { get; }
     public DateTime PasswordUpdateTimestampUTC { get; }
 
-    public static EncryptedPasswordAttributeInner ParseFromJson(string passwordJson) {
-        EncryptedPasswordAttributeRaw? encryptedPasswordAttributeRaw =
-            EncryptedPasswordAttributeRaw.Parse(passwordJson) ??
+    public static EncryptedInner ParseFromJson(string passwordJson) {
+        EncryptedRaw? encryptedRaw =
+            EncryptedRaw.Parse(passwordJson) ??
             throw new ArgumentException("Failed to parse JSON.");
-        if (string.IsNullOrEmpty(encryptedPasswordAttributeRaw.AccountName)) {
+        if (string.IsNullOrEmpty(encryptedRaw.AccountName)) {
             throw new ArgumentException("AccountName field was missing from encrypted attribute");
         }
-        if (string.IsNullOrEmpty(encryptedPasswordAttributeRaw.UpdateTimestamp)) {
+        if (string.IsNullOrEmpty(encryptedRaw.UpdateTimestamp)) {
             throw new ArgumentException("UpdateTimestamp field was missing from encrypted attribute");
         }
-        if (string.IsNullOrEmpty(encryptedPasswordAttributeRaw.Password)) {
+        if (string.IsNullOrEmpty(encryptedRaw.Password)) {
             throw new ArgumentException("Password field was missing from encrypted attribute");
         }
         DateTime passwordUpdateTimestampUTC = DateTime.FromFileTimeUtc(
             long.Parse(
-                encryptedPasswordAttributeRaw.UpdateTimestamp,
+                encryptedRaw.UpdateTimestamp,
                 NumberStyles.HexNumber
             )
         );
         return new(
-            encryptedPasswordAttributeRaw.AccountName!,
-            encryptedPasswordAttributeRaw.Password!,
+            encryptedRaw.AccountName!,
+            encryptedRaw.Password!,
             passwordUpdateTimestampUTC
         );
     }
-    private EncryptedPasswordAttributeInner(string accountName, string password, DateTime passwordUpdateTimestampUTC) {
+    private EncryptedInner(string accountName, string password, DateTime passwordUpdateTimestampUTC) {
         AccountName = accountName;
         Password = password;
         PasswordUpdateTimestampUTC = passwordUpdateTimestampUTC;

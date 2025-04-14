@@ -5,7 +5,7 @@ namespace SapphTools.Laps.Internal;
 internal static partial class OSNative {
     #region Structs
     [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)]
-    public struct DOMAIN_CONTROLLER_INFO {
+    public struct DC_INFO {
         [MarshalAs(UnmanagedType.LPWStr)]
         public string DomainControllerName;
 
@@ -30,12 +30,12 @@ internal static partial class OSNative {
         [MarshalAs(UnmanagedType.LPWStr)]
         public string ClientSiteName;
     }
-    public struct LSA_OBJECT_ATTRIBUTES {
+    public struct LsaAttribs {
         public int Length;
 
         public IntPtr RootDirectory;
 
-        public LSA_UNICODE_STRING ObjectName;
+        public LsaString ObjectName;
 
         public uint Attributes;
 
@@ -43,7 +43,10 @@ internal static partial class OSNative {
 
         public IntPtr SecurityQualityOfService;
     }
-    public struct LSA_UNICODE_STRING : IDisposable {
+    public static LsaAttribs EmptyAttribs() {
+        return default;
+    }
+    public struct LsaString : IDisposable {
         public ushort Length;
 
         public ushort MaximumLength;
@@ -73,17 +76,20 @@ internal static partial class OSNative {
             Reset();
         }
     }
-    public struct POLICY_DOMAIN_INFO {
-        public LSA_UNICODE_STRING DomainName { get; set; }
+    public static LsaString EmptyString() {
+        return default;
+    }
+    public struct DomainPolicy {
+        public LsaString DomainName { get; set; }
 
         public IntPtr DomainSid { get; set; }
     }
-    internal struct POLICY_DNS_DOMAIN_INFO {
-        public LSA_UNICODE_STRING Name { get; set; }
+    internal struct DnsDomainPolicy {
+        public LsaString Name { get; set; }
 
-        public LSA_UNICODE_STRING DnsDomainName { get; set; }
+        public LsaString DnsDomainName { get; set; }
 
-        public LSA_UNICODE_STRING DnsForestName { get; set; }
+        public LsaString DnsForestName { get; set; }
 
         public Guid DomainGuid { get; set; }
 
@@ -118,8 +124,8 @@ internal static partial class OSNative {
 
     [DllImport("advapi32.dll", SetLastError = true)]
     public static extern uint LsaOpenPolicy(
-        ref LSA_UNICODE_STRING SystemName,
-        ref LSA_OBJECT_ATTRIBUTES ObjectAttributes,
+        ref LsaString SystemName,
+        ref LsaAttribs ObjectAttributes,
         uint DesiredAccess,
         out IntPtr PolicyHandle);
 
